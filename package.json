@@ -1,0 +1,91 @@
+{
+  "_args": [
+    [
+      "clickhouse",
+      "/home/www/ukit_dev"
+    ]
+  ],
+  "_from": "clickhouse@latest",
+  "_id": "clickhouse@1.0.0",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/clickhouse",
+  "_nodeVersion": "4.2.2",
+  "_npmOperationalInternal": {
+    "host": "packages-12-west.internal.npmjs.com",
+    "tmp": "tmp/clickhouse-1.0.0.tgz_1466630754625_0.542473382782191"
+  },
+  "_npmUser": {
+    "email": "berezhnov@ucoz-team.net",
+    "name": "dmitry.berezhnov"
+  },
+  "_npmVersion": "3.4.1",
+  "_phantomChildren": {
+    "aws-sign2": "0.6.0",
+    "aws4": "1.4.1",
+    "bl": "1.1.2",
+    "caseless": "0.11.0",
+    "combined-stream": "1.0.5",
+    "extend": "3.0.0",
+    "forever-agent": "0.6.1",
+    "form-data": "1.0.0-rc4",
+    "har-validator": "2.0.6",
+    "hawk": "3.1.3",
+    "http-signature": "1.1.1",
+    "is-typedarray": "1.0.0",
+    "isstream": "0.1.2",
+    "json-stringify-safe": "5.0.1",
+    "mime-types": "2.1.11",
+    "node-uuid": "1.4.7",
+    "oauth-sign": "0.8.2",
+    "stringstream": "0.0.5",
+    "tough-cookie": "2.2.2",
+    "tunnel-agent": "0.4.3"
+  },
+  "_requested": {
+    "name": "clickhouse",
+    "raw": "clickhouse",
+    "rawSpec": "",
+    "scope": null,
+    "spec": "latest",
+    "type": "tag"
+  },
+  "_requiredBy": [
+    "#USER"
+  ],
+  "_shasum": "cf85ab5364055c479b1ee71f12ba206a3ecb80b2",
+  "_shrinkwrap": null,
+  "_spec": "clickhouse",
+  "_where": "/home/www/ukit_dev",
+  "author": {
+    "name": "Dmitry Berezhnov"
+  },
+  "dependencies": {
+    "async": "^2.0.0-rc.6",
+    "lodash": "^4.13.1",
+    "querystring": "^0.2.0",
+    "request": "^2.72.0"
+  },
+  "description": "Client for ClickHouse",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "shasum": "cf85ab5364055c479b1ee71f12ba206a3ecb80b2",
+    "tarball": "https://registry.npmjs.org/clickhouse/-/clickhouse-1.0.0.tgz"
+  },
+  "license": "ISC",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "dmitry.berezhnov",
+      "email": "berezhnov@ucoz-team.net"
+    }
+  ],
+  "name": "clickhouse",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.1"
+}
