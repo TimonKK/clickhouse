@@ -43,6 +43,9 @@ class ClickHouse {
 		this.typeCast = new TypeCast();
 	}
 	
+	getHost() {
+		return this.opts.url + ':' + this.opts.port;
+	}
 	
 	/**
 	 * Get url query
@@ -56,7 +59,7 @@ class ClickHouse {
 		
 		if (Object.keys(params).length == 0) return new Error('query is empty');
 		
-		return this.opts.url + ':' + this.opts.port + '?' + querystring.stringify(params);
+		return this.getHost() + '?' + querystring.stringify(params);
 	}
 	
 	
@@ -191,54 +194,38 @@ class ClickHouse {
 			return rs;
 		}
 	}
+	
+
+	/**
+	 * Insert rows by one query
+	 * @param {String} tableName
+	 * @param {Array} values List or values. Each value is array of columns
+	 * @param {Function} cb
+	 * @returns
+	 */
+	insertMany(tableName, values, cb) {
+		var url = `INSERT INTO ${tableName} FORMAT TabSeparated`;
+		
+		request.post(
+			{
+				url     : this.getHost() + '?query=' + url,
+				body    : values
+					.map(i => i.join('\t'))
+					.join('\n'),
+				headers : {
+					'Content-Type': 'text/plain'
+				}
+			},
+			function (error, response, body) {
+				if ( ! error && response.statusCode == 200) {
+					cb(null, body);
+				} else {
+					return cb(error || body);
+				}
+			}
+		);
+	}
 }
 
 
 module.exports = ClickHouse;
-
-//Example
-
-/*
-var async = require('async');
- 
-var query = 'SELECT FlightDate, DestCityName, AirlineID, DestStateFips FROM ontime LIMIT 10';
-var ch = new ClickHouse();
-
-async.series(
-	[
-		function (cb) {
-			
-			// single query
-			ch.query(query, function (err, rows) {
-				console.log(err, rows);
-				
-				cb();
-			});
-		},
-		
-		function (cb) {
-			var count = 0;
-			
-			// query with data streaming
-			ch.query(query)
-				.on('data', function (data) {
-					console.log('ch data', data);
-					if (++count % 1000 == 0) console.log('count', count);
-				})
-				.on('error', function (err) {
-					console.log('ch error', err);
-					
-					process.exit();
-				})
-				.on('end', function () {
-					console.log('ch end', count);
-					
-					cb();
-				});
-		}
-	],
-	function () {
-		process.exit();
-	}
-);
- */
