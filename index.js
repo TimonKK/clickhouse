@@ -12,12 +12,12 @@ class TypeCast {
 	constructor() {
 		this.castMap = TypeList.reduce(
 			(obj, type) => {
-				obj[type] = value => { return parseInt(value, 10) };
+				obj[type] = value => parseInt(value, 10);
 				return obj;
 			},
 			{
-				'Date'   : value =>value,
-				'String' : value =>value
+				'Date'   : value => value,
+				'String' : value => value
 			}
 		);
 	}
@@ -28,6 +28,7 @@ class TypeCast {
 	}
 }
 
+var lineSep = "\n";
 
 class ClickHouse {
 	constructor(_opts) {
@@ -55,7 +56,7 @@ class ClickHouse {
 	getUrl(query) {
 		var params = {};
 		
-		if (query) params['query'] = query + ' FORMAT TabSeparatedWithNamesAndTypes';
+		if (query) params['query'] = query;
 		
 		if (Object.keys(params).length == 0) return new Error('query is empty');
 		
@@ -70,9 +71,16 @@ class ClickHouse {
 	 */
 	_parseData(data) {
 		var me         = this,
-			rows       = data.toString('utf8').split('\n'),
-			columnList = rows[0].split('\t'),
-			typeList   = rows[1].split('\t');
+			rows       = data.toString('utf8'),
+			columnList = [],
+			typeList   = [];
+		
+		
+		if ( ! rows) return [];
+		
+		rows       = rows.split('\n');
+		columnList = rows[0].split('\t');
+		typeList   = rows[1].split('\t');
 		
 		// Удаляем строки с заголовками и типами столбцов И завершающую строку
 		rows = rows.slice(2, rows.length - 1);
@@ -109,30 +117,73 @@ class ClickHouse {
 	 * @param {Function} cb
 	 * @returns {Stream|undefined}
 	 */
-	query(query, cb) {
-		var me  = this,
-			url = me.getUrl(query);
+	query(_opts, cb) {
+		var me   = this,
+			url  = '',
+			opts = {
+				query : '',
+				body  : ''
+			};
 		
-		if (me.opts.debug) console.log('url', url);
+		
+		if ( ! _opts) return cb(new Error('first params should not empty'));
+		
+		
+		if (_.isString(_opts)) opts.query = _opts;
+		else                   opts       = _.merge(opts, _opts);
+		
+		
+		// 'INSERT INTO t VALUES' && [ [1, '123', '2015-10-11'], [2, '456', '2015-02-29'], ...]
+		if (opts.query && opts.body) {
+			if (opts.query.match(/^insert/i)) {
+				opts.body = opts.body.map(i => i.join('\t')).join('\n');
+				
+				opts.query += ' FORMAT TabSeparated';
+			} else {
+				opts.query += ' FORMAT TabSeparatedWithNamesAndTypes';
+			}
+			
+			url = me.getUrl(opts.query);
+		}
+		
+		// 'INSERT INTO t VALUES (1),(2),(3)' || 'SELECT date, count() FROM log WHERE siteId = '123'
+		else if (opts.query && ! opts.body) {
+			if ( ! opts.query.match(/^insert/i)) {
+				opts.query += ' FORMAT TabSeparatedWithNamesAndTypes';
+			}
+			
+			opts.body  = opts.query;
+			opts.query = '';
+			url        = me.getHost();
+		}
+		
+		var reqParams = {
+			url     : url,
+			body    : opts.body,
+			headers : {
+				'Content-Type': 'text/plain'
+			}
+		};
 		
 		if (cb) {
-			return request.get(url, function (error, response, body) {
-				if ( ! error && response.statusCode == 200) {
-					cb(null, me._parseData(body));
-				} else {
-					cb(error);
+			return request.post(
+				reqParams,
+				function (error, response, body) {
+					if (response.statusCode == 200 && response.statusMessage == 'OK') cb(null, me._parseData(body));
+					else                                                              cb(error ? error : response.body || response.statusMessage);
 				}
-			});
+			);
 		} else {
 			let rs = new stream.Readable();
 			rs._read = function (chunk) {
 				if (me.opts.debug) console.log('rs _read chunk', chunk);
 			};
 			
-			let queryStream = request.get(url);
+			let queryStream = request.post(reqParams);
 			queryStream.columnsName = null;
 			
 			let responseStatus = 200;
+			let str = '';
 			
 			queryStream
 				.on('response', function (response) {
@@ -142,12 +193,19 @@ class ClickHouse {
 					rs.emit('error', err);
 				})
 				.on('data', function (data) {
+					str  = str + data.toString('utf8');
 					
-					// Если ошибка на строне сервера (не правильный запрос, ещё что-то),
-					// то придёт один пакет данных с сообщением об ошибке
-					if (responseStatus != 200) return rs.emit('error',  data.toString('utf8'));
 					
-					var rows = data.toString('utf8').split('\n');
+					if (responseStatus != 200) return rs.emit('error', str);
+					
+					
+					let lineSepIndex = str.lastIndexOf(lineSep);
+					if (lineSepIndex == -1) return true;
+					
+					
+					var rows = str.substr(0, lineSepIndex).split(lineSep);
+					str = str.substr(lineSepIndex + 1);
+					
 					
 					if ( ! queryStream.columnList) {
 						let columnList = rows[0].split('\t');
@@ -171,7 +229,9 @@ class ClickHouse {
 						if (me.opts.debug) console.log('columns', queryStream.columnList);
 					}
 					
+					
 					if (me.opts.debug) console.log('raw data', data.toString('utf8'));
+					
 					
 					for(let i=0; i<rows.length; i++) {
 						let columns = rows[i].split('\t');
@@ -195,7 +255,7 @@ class ClickHouse {
 		}
 	}
 	
-
+	
 	/**
 	 * Insert rows by one query
 	 * @param {String} tableName
