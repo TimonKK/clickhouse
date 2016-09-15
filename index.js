@@ -3,7 +3,8 @@
 var _           = require('lodash'),
 	request     = require('request'),
 	stream      = require('stream'),
-	querystring = require('querystring');
+	querystring = require('querystring'),
+	jsesc       = require('jsesc');
 
 
 var TypeList = ['UInt8', 'UInt16', 'UInt32', 'UInt64', 'Int8', 'Int16', 'Int32', 'Int64'];
@@ -269,9 +270,9 @@ class ClickHouse {
 		request.post(
 			{
 				url     : this.getHost() + '?query=' + url,
-				body    : values
-					.map(i => i.join('\t'))
-					.join('\n'),
+				body    : values.map(function(row) {
+						return row.map(function(column) { return jsesc(column); }).join('\t');
+					})
 				headers : {
 					'Content-Type': 'text/plain'
 				}

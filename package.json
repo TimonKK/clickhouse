@@ -4,6 +4,7 @@
   },
   "dependencies": {
     "async": "^2.0.0-rc.6",
+    "jsesc": "^2.2.0",
     "lodash": "^4.13.1",
     "querystring": "^0.2.0",
     "request": "^2.72.0"
@@ -25,8 +26,8 @@
   ],
   "name": "clickhouse",
   "version": "1.0.5",
-  "repository" :  {
-    "type" : "git",
-    "url" : "https://github.com/TimonKK/clickhouse.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TimonKK/clickhouse.git"
   }
 }
