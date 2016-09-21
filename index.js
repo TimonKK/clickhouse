@@ -170,8 +170,12 @@ class ClickHouse {
 			return request.post(
 				reqParams,
 				function (error, response, body) {
-					if (response.statusCode == 200 && response.statusMessage == 'OK') cb(null, me._parseData(body));
-					else                                                              cb(error ? error : response.body || response.statusMessage);
+					if (error)                                                        return cb(error);
+					
+					if (response.statusCode == 200 && response.statusMessage == 'OK') return cb(null, me._parseData(body));
+					
+					// Если попали сюда - значит что-то пошло не так
+					cb(response.body || response.statusMessage);
 				}
 			);
 		} else {
