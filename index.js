@@ -149,7 +149,8 @@ class ClickHouse {
 		
 		// 'INSERT INTO t VALUES (1),(2),(3)' || 'SELECT date, count() FROM log WHERE siteId = '123'
 		else if (opts.query && ! opts.body) {
-			if ( ! opts.query.match(/^insert/i) && (!opts.query.match(/^create/i))) {
+			if ( ! opts.query.match(/^insert/i) && (!opts.query.match(/^create/i))
+			    && !opts.query.match(/^drop/i)) {
 				opts.query += ' FORMAT TabSeparatedWithNamesAndTypes';
 			}
 			
