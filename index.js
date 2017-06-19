@@ -275,7 +275,7 @@ class ClickHouse {
 			{
 				url     : this.getHost() + '?query=' + url,
 				body    : values.map(function(row) {
-					return row.map(function(column) { return jsesc(column); }).join('\t');
+					return row.map(function(column) { return (typeof column === 'undefined' || column === null) ? '\\N' : jsesc(column); }).join('\t');
 				}).join('\n'),
 				headers : {
 					'Content-Type': 'text/plain'
