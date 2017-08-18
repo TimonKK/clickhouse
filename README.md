@@ -2,10 +2,17 @@
 NodeJS client for [ClickHouse](https://clickhouse.yandex/).
 Send query over HTTP interface.
 
+Install:
+
+```bash
+npm i clickhouse
+```
+
 Example:
 
 ```javascript
 var async = require('async');
+var ClickHouse = require('clickhouse');
  
 var query = 'SELECT FlightDate, DestCityName, AirlineID, DestStateFips FROM ontime LIMIT 10';
 var ch = new ClickHouse({
