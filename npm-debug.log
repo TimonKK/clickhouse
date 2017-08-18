@@ -1,0 +1,108 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/home/www/.nvm/versions/node/v4.2.2/bin/node',
+1 verbose cli   '/home/www/.nvm/versions/node/v4.2.2/bin/npm',
+1 verbose cli   'publish' ]
+2 info using npm@3.4.1
+3 info using node@v4.2.2
+4 verbose publish [ '.' ]
+5 silly cache add args [ '.', null ]
+6 verbose cache add spec .
+7 silly cache add parsed spec Result {
+7 silly cache add   raw: '.',
+7 silly cache add   scope: null,
+7 silly cache add   name: null,
+7 silly cache add   rawSpec: '.',
+7 silly cache add   spec: '/home/www/ch',
+7 silly cache add   type: 'directory' }
+8 verbose addLocalDirectory /home/www/.npm/clickhouse/1.1.2/package.tgz not in flight; packing
+9 info lifecycle clickhouse@1.1.2~prepublish: clickhouse@1.1.2
+10 silly lifecycle clickhouse@1.1.2~prepublish: no script for prepublish, continuing
+11 verbose tar pack [ '/home/www/.npm/clickhouse/1.1.2/package.tgz',
+11 verbose tar pack   '/home/www/ch' ]
+12 verbose tarball /home/www/.npm/clickhouse/1.1.2/package.tgz
+13 verbose folder /home/www/ch
+14 verbose addLocalTarball adding from inside cache /home/www/.npm/clickhouse/1.1.2/package.tgz
+15 silly cache afterAdd clickhouse@1.1.2
+16 verbose afterAdd /home/www/.npm/clickhouse/1.1.2/package/package.json not in flight; writing
+17 verbose afterAdd /home/www/.npm/clickhouse/1.1.2/package/package.json written
+18 silly publish { author: { name: 'Dmitry Berezhnov' },
+18 silly publish   dependencies:
+18 silly publish    { async: '^2.0.0-rc.6',
+18 silly publish      jsesc: '^2.2.0',
+18 silly publish      lodash: '^4.13.1',
+18 silly publish      querystring: '^0.2.0',
+18 silly publish      request: '^2.72.0' },
+18 silly publish   description: 'Client for ClickHouse',
+18 silly publish   devDependencies: {},
+18 silly publish   directories: {},
+18 silly publish   dist:
+18 silly publish    { shasum: 'cf85ab5364055c479b1ee71f12ba206a3ecb80b2',
+18 silly publish      tarball: 'https://registry.npmjs.org/clickhouse/-/clickhouse-1.0.0.tgz' },
+18 silly publish   license: 'ISC',
+18 silly publish   main: 'index.js',
+18 silly publish   maintainers: [ { name: 'dmitry.berezhnov', email: 'dim901@yandex.ru' } ],
+18 silly publish   name: 'clickhouse',
+18 silly publish   version: '1.1.2',
+18 silly publish   repository:
+18 silly publish    { type: 'git',
+18 silly publish      url: 'git+https://github.com/TimonKK/clickhouse.git' },
+18 silly publish   readme: '# clickhouse\nNodeJS client for [ClickHouse](https://clickhouse.yandex/).\nSend query over HTTP interface.\n\nExample:\n\n```javascript\nvar async = require(\'async\');\n \nvar query = \'SELECT FlightDate, DestCityName, AirlineID, DestStateFips FROM ontime LIMIT 10\';\nvar ch = new ClickHouse({\n\turl   : \'http://localhost\',\n\tport  : 8123,\n\tdebug : false\n});\n\nasync.parallel(\n\t[\n\t\tfunction (cb) {\n\n\t\t\t// single query\n\t\t\tch.query(query, function (err, rows) {\n\t\t\t\tconsole.log(\'single query result\', err, rows);\n\t\t\t\t\n\t\t\t\tcb(err);\n\t\t\t});\n\t\t},\n\t\t\n\t\tfunction (cb) {\n\t\t\tvar error = null;\n\t\t\t\n\t\t\t// query with data streaming\n\t\t\tch.query(query)\n\t\t\t\t.on(\'data\', function (data) {\n\t\t\t\t\tconsole.log(\'data\', data);\n\t\t\t\t})\n\t\t\t\t.on(\'error\', function (err) {\n\t\t\t\t\terror = err;\n\t\t\t\t})\n\t\t\t\t.on(\'end\', function () {\n\t\t\t\t\tcb(error);\n\t\t\t\t});\n\t\t},\n\n\t\tfunction(cb) {\n\n\t\t\t// insert rows\n\t\t\tch.insertMany(\n\t\t\t\t\'sometable\',\n\t\t\t\t[\n\t\t\t\t\t// row 1\n\t\t\t\t\t[\n\t\t\t\t\t\t\'2016-07-02\',\n\t\t\t\t\t\t\'1\',\n\t\t\t\t\t\t12\n\t\t\t\t\t],\n\n\t\t\t\t\t// row 2\n\t\t\t\t\t[\n\t\t\t\t\t\t\'2016-07-03\',\n\t\t\t\t\t\t\'2\',\n\t\t\t\t\t\t30\n\t\t\t\t\t]\n\t\t\t\t],\n\t\t\t\tfunction(err, result) {\n\t\t\t\t\tif (err)  return cb(err);\n\n\t\t\t\t\tconsole.log(\'insert result\', result);\n\t\t\t\t}\n\t\t\t);\n\t\t}\n\t],\n\tfunction () {\n\t\tprocess.exit();\n\t}\n);\n\n```',
+18 silly publish   readmeFilename: 'README.md',
+18 silly publish   gitHead: '303e955884bd430ea183eae8e4b7271dce7e7c58',
+18 silly publish   bugs: { url: 'https://github.com/TimonKK/clickhouse/issues' },
+18 silly publish   homepage: 'https://github.com/TimonKK/clickhouse#readme',
+18 silly publish   _id: 'clickhouse@1.1.2',
+18 silly publish   scripts: {},
+18 silly publish   _shasum: '1ae203430325cc70e4b4410dc1afa4ee9326211b',
+18 silly publish   _from: '.' }
+19 verbose getPublishConfig undefined
+20 silly mapToRegistry name clickhouse
+21 silly mapToRegistry using default registry
+22 silly mapToRegistry registry https://registry.npmjs.org/
+23 silly mapToRegistry uri https://registry.npmjs.org/clickhouse
+24 verbose publish registryBase https://registry.npmjs.org/
+25 silly publish uploading /home/www/.npm/clickhouse/1.1.2/package.tgz
+26 verbose request uri https://registry.npmjs.org/clickhouse
+27 verbose request sending authorization for write operation
+28 info attempt registry request try #1 at 12:56:05
+29 verbose request using bearer token for auth
+30 verbose request id 7d6c37826c6c833d
+31 http request PUT https://registry.npmjs.org/clickhouse
+32 http 403 https://registry.npmjs.org/clickhouse
+33 verbose headers { 'content-type': 'application/json',
+33 verbose headers   'cache-control': 'max-age=300',
+33 verbose headers   'content-length': '95',
+33 verbose headers   'accept-ranges': 'bytes',
+33 verbose headers   date: 'Fri, 18 Aug 2017 09:56:06 GMT',
+33 verbose headers   via: '1.1 varnish',
+33 verbose headers   connection: 'keep-alive',
+33 verbose headers   'x-served-by': 'cache-bma7031-BMA',
+33 verbose headers   'x-cache': 'MISS',
+33 verbose headers   'x-cache-hits': '0',
+33 verbose headers   'x-timer': 'S1503050166.639826,VS0,VE1023',
+33 verbose headers   vary: 'Accept-Encoding, Accept' }
+34 verbose request invalidating /home/www/.npm/registry.npmjs.org/clickhouse on PUT
+35 error publish Failed PUT 403
+36 verbose stack Error: "You cannot publish over the previously published version 1.1.2." : clickhouse
+36 verbose stack     at makeError (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:264:12)
+36 verbose stack     at CachingRegistryClient.<anonymous> (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:252:14)
+36 verbose stack     at Request._callback (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:172:14)
+36 verbose stack     at Request.self.callback (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/request/request.js:198:22)
+36 verbose stack     at emitTwo (events.js:87:13)
+36 verbose stack     at Request.emit (events.js:172:7)
+36 verbose stack     at Request.<anonymous> (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/request/request.js:1082:10)
+36 verbose stack     at emitOne (events.js:82:20)
+36 verbose stack     at Request.emit (events.js:169:7)
+36 verbose stack     at IncomingMessage.<anonymous> (/home/www/.nvm/versions/node/v4.2.2/lib/node_modules/npm/node_modules/request/request.js:1009:12)
+37 verbose statusCode 403
+38 verbose pkgid clickhouse
+39 verbose cwd /home/www/ch
+40 error Linux 3.16.0-4-amd64
+41 error argv "/home/www/.nvm/versions/node/v4.2.2/bin/node" "/home/www/.nvm/versions/node/v4.2.2/bin/npm" "publish"
+42 error node v4.2.2
+43 error npm  v3.4.1
+44 error code E403
+45 error "You cannot publish over the previously published version 1.1.2." : clickhouse
+46 error If you need help, you may report this error at:
+46 error     <https://github.com/npm/npm/issues>
+47 verbose exit [ 1, true ]
