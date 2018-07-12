@@ -18,7 +18,8 @@ var query = 'SELECT FlightDate, DestCityName, AirlineID, DestStateFips FROM onti
 var ch = new ClickHouse({
 	url   : 'http://localhost',
 	port  : 8123,
-	debug : false
+	debug : false,
+	password : 'Cl!ckhOUse' // optional
 });
 
 async.parallel(

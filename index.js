@@ -37,7 +37,8 @@ class ClickHouse {
 			{
 				url   : 'http://localhost',
 				port  : 8123,
-				debug : false
+				debug : false,
+				password : ''
 			},
 			_opts
 		);
@@ -48,6 +49,12 @@ class ClickHouse {
 	getHost() {
 		return this.opts.url + ':' + this.opts.port;
 	}
+
+
+	getPassword() {
+		return this.opts.password ? this.opts.password : '';
+	}
+
 
 	/**
 	 * Get url query
@@ -61,6 +68,7 @@ class ClickHouse {
 
 		if (Object.keys(params).length == 0) return new Error('query is empty');
 
+		if (this.getPassword()) params['password'] =  this.getPassword();
 		return this.getHost() + '?' + querystring.stringify(params);
 	}
 
@@ -133,7 +141,7 @@ class ClickHouse {
 		if (_.isString(_opts)) opts.query = _opts;
 		else                   opts       = _.merge(opts, _opts);
 
-
+		console.log(opts)
 		// 'INSERT INTO t VALUES' && [ [1, '123', '2015-10-11'], [2, '456', '2015-02-29'], ...]
 		if (opts.query && opts.body) {
 			if (opts.query.match(/^insert/i)) {
@@ -274,7 +282,7 @@ class ClickHouse {
 
 		request.post(
 			{
-				url     : this.getHost() + '?query=' + url,
+				url     : this.getHost() + '?query=' + url + '&password=' + this.getPassword(),
 				body    : values.map(function(row) {
 					return row.map(function(column) { return (typeof column === 'undefined' || column === null) ? '\\N' : jsesc(column); }).join('\t');
 				}).join('\n'),
