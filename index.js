@@ -141,7 +141,6 @@ class ClickHouse {
 		if (_.isString(_opts)) opts.query = _opts;
 		else                   opts       = _.merge(opts, _opts);
 
-		console.log(opts)
 		// 'INSERT INTO t VALUES' && [ [1, '123', '2015-10-11'], [2, '456', '2015-02-29'], ...]
 		if (opts.query && opts.body) {
 			if (opts.query.match(/^insert/i)) {
