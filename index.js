@@ -169,7 +169,8 @@ class ClickHouse {
 			url     : url,
 			body    : opts.body,
 			headers : {
-				'Content-Type': 'text/plain'
+				'Content-Type': 'text/plain',
+				'Connection': 'Keep-Alive',
 			}
 		};
 
@@ -286,7 +287,8 @@ class ClickHouse {
 					return row.map(function(column) { return (typeof column === 'undefined' || column === null) ? '\\N' : jsesc(column); }).join('\t');
 				}).join('\n'),
 				headers : {
-					'Content-Type': 'text/plain'
+					'Content-Type': 'text/plain',
+					'Connection': 'Keep-Alive',
 				}
 			},
 			function (error, response, body) {
