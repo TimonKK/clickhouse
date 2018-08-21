@@ -12,6 +12,28 @@ Example:
 
 ```javascript
 const { ClickHouse } = require('clickhouse');
+
+// all options
+const clickhouse = new ClickHouse();
+```
+or
+
+```javascript
+// all options
+const clickhouse = new ClickHouse({
+	url: 'http://localhost',
+	port: 8123,
+	debug: false,
+	user: 'default',
+	password: '',
+	basicAuth: null,
+	isUseGzip: false,
+	config: {
+		session_timeout                         : 60,
+		output_format_json_quote_64bit_integers : 0,
+		enable_http_compression                 : 0
+	}
+});
 ```
 
 ```javascript
