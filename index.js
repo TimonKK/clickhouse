@@ -1,297 +1,548 @@
 'use strict';
 
-var _           = require('lodash'),
-	request     = require('request'),
-	stream      = require('stream'),
-	querystring = require('querystring'),
-	jsesc       = require('jsesc');
+const zlib = require('zlib');
+
+const
+	_            = require('lodash'),
+	request      = require('request'),
+	stream       = require('stream'),
+	querystring  = require('querystring'),
+	JSONStream   = require('JSONStream'),
+	jsesc        = require('jsesc');
 
 
-var TypeList = ['UInt8', 'UInt16', 'UInt32', 'UInt64', 'Int8', 'Int16', 'Int32', 'Int64'];
+/**
+ * Content-Encoding: gzip
+ * Accept-Encoding: gzip
+ * и включить настройку ClickHouse enable_http_compression.
+ *
+ * session_id
+ *
+ * session_timeout
+ */
 
-class TypeCast {
-	constructor() {
-		this.castMap = TypeList.reduce(
-			(obj, type) => {
-				obj[type] = value => parseInt(value, 10);
-				return obj;
-			},
-			{
-				'Date'   : value => value,
-				'String' : value => value
-			}
-		);
-	}
+var SEPARATORS = {
+	TSV: "\t",
+	CSV: ",",
+	Values: ","
+};
+
+var ALIASES = {
+	TabSeparated: "TSV"
+};
+
+var ESCAPE_STRING = {
+	TSV: function (v, quote) {return v.replace (/\\/g, '\\\\').replace (/\\/g, '\\').replace(/\t/g, '\\t').replace(/\n/g, '\\n')},
+	CSV: function (v, quote) {return v.replace (/\"/g, '""')},
+};
+
+var ESCAPE_NULL = {
+	TSV: "\\N",
+	CSV: "\\N",
+	Values: "\\N",
+	// JSONEachRow: "\\N",
+};
 
 
-	cast(type, value) {
-		return this.castMap[type] ? this.castMap[type](value) : value;
+var R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
+
+function encodeValue(quote, v, format) {
+	format = ALIASES[format] || format;
+
+	switch (typeof v) {
+		case 'string':
+			return ESCAPE_STRING[format] ? ESCAPE_STRING[format] (v, quote) : v;
+		case 'number':
+			if (isNaN (v))
+				return 'nan';
+			if (v === +Infinity)
+				return '+inf';
+			if (v === -Infinity)
+				return '-inf';
+			if (v === Infinity)
+				return 'inf';
+			return v;
+		case 'object':
+			// clickhouse allows to use unix timestamp in seconds
+			if (v instanceof Date)
+				return ("" + v.valueOf ()).substr (0, 10);
+			// you can add array items
+			if (v instanceof Array)
+				return '[' + v.map (encodeValue.bind (this, true, format)).join (',') + ']'
+			// TODO: tuples support
+			if (!format) console.trace ();
+			if (v === null)
+				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
+
+			return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
+
+			console.warn ('Cannot stringify [Object]:', v);
+		case 'boolean':
+			return v === true ? 1 : 0;
 	}
 }
 
-var lineSep = "\n";
+function encodeRow(row, format) {
+	format = ALIASES[format] || format;
 
-class ClickHouse {
-	constructor(_opts) {
-		this.opts = _.extend(
-			{
-				url   : 'http://localhost',
-				port  : 8123,
-				debug : false
-			},
-			_opts
-		);
+	var encodedRow;
 
-		this.typeCast = new TypeCast();
+	if (Array.isArray (row)) {
+		encodedRow = row.map (function (field) {
+			return encodeValue (false, field, format);
+		}.bind (this)).join (SEPARATORS[format]) + "\n";
+	} else if (row.toString () === "[object Object]" && format === "JSONEachRow") {
+		encodedRow = JSON.stringify (Object.keys (row).reduce (function (encodedRowObject, k) {
+			encodedRowObject[k] = encodeValue (false, row[k], format);
+			return encodedRowObject;
+		}.bind (this), {})) + "\n";
 	}
 
-	getHost() {
-		return this.opts.url + ':' + this.opts.port;
+	return encodedRow;
+}
+
+function getErrorObj(res) {
+	let err = new Error(`${res.statusCode}: ${res.body || res.statusMessage}`);
+	
+	if (res.body) {
+		let m = res.body.match(R_ERROR);
+		if (m) {
+			if (m[1] && isNaN(parseInt(m[1])) === false) {
+				err.code    = parseInt(m[1]);
+			}
+			
+			if (m[2]) {
+				err.message = m[2];
+			}
+		}
 	}
+	
+	return err;
+}
 
-	/**
-	 * Get url query
-	 * @param {String} query
-	 * @returns {String}
-	 */
-	getUrl(query) {
-		var params = {};
-
-		if (query) params['query'] = query;
-
-		if (Object.keys(params).length == 0) return new Error('query is empty');
-
-		return this.getHost() + '?' + querystring.stringify(params);
+class QueryCursor {
+	constructor(query, reqParams, opts) {
+		this.isInsert  = !!query.match(/^insert/i);
+		this.query     = query;
+		this.reqParams = _.merge({}, reqParams);
+		this.opts      = opts;
 	}
-
-
-	/**
-	 * Parse data
-	 * @param {Buffer} data
-	 * @returns {Array}
-	 */
-	_parseData(data) {
-		var me         = this,
-			rows       = data.toString('utf8'),
-			columnList = [],
-			typeList   = [];
-
-
-		if ( ! rows) return [];
-
-		rows       = rows.split('\n');
-		columnList = rows[0].split('\t');
-		typeList   = rows[1].split('\t');
-
-		// Удаляем строки с заголовками и типами столбцов И завершающую строку
-		rows = rows.slice(2, rows.length - 1);
-
-		columnList = columnList.reduce(
-			function (arr, column, i) {
-				arr.push({
-					name : column,
-					type : typeList[i]
-				});
-
-				return arr;
-			},
-			[]
-		);
-
-		return rows.map(function (row, i) {
-			let columns = row.split('\t');
-
-			return columnList.reduce(
-				function (obj, column, i) {
-					obj[column.name] = me.typeCast.cast(column.type, columns[i]);
-					return obj;
-				},
-				{}
-			);
+	
+	
+	exec(cb) {
+		let me = this;
+		
+		if (me.opts.debug) {
+			console.log('exec req headers', me.reqParams.headers);
+		}
+		
+		request.post(me.reqParams, (err, res) => {
+			if (err) {
+				return cb(err);
+			} else if (res.statusCode !== 200) {
+				return cb(
+					getErrorObj(res)
+				);
+			}
+			
+			if ( ! res.body) {
+				return cb(null, {r: 1});
+			}
+			
+			if (me.opts.debug) {
+				console.log('exec res headers', res.headers);
+			}
+			
+			try {
+				let json = JSON.parse(res.body);
+				
+				cb(null, json.data);
+			} catch (err2) {
+				cb(err2);
+			}
 		});
 	}
-
-
-	/**
-	 * Exec query
-	 * @param {String} query
-	 * @param {Function} cb
-	 * @returns {Stream|undefined}
-	 */
-	query(_opts, cb) {
-		var me   = this,
-			url  = '',
-			opts = {
-				query : '',
-				body  : ''
-			};
-
-
-		if ( ! _opts) return cb(new Error('first params should not empty'));
-
-
-		if (_.isString(_opts)) opts.query = _opts;
-		else                   opts       = _.merge(opts, _opts);
-
-
-		// 'INSERT INTO t VALUES' && [ [1, '123', '2015-10-11'], [2, '456', '2015-02-29'], ...]
-		if (opts.query && opts.body) {
-			if (opts.query.match(/^insert/i)) {
-				opts.body = opts.body.map(i => i.join('\t')).join('\n');
-
-				opts.query += ' FORMAT TabSeparated';
-			} else {
-				opts.query += ' FORMAT TabSeparatedWithNamesAndTypes';
-			}
-
-			url = me.getUrl(opts.query);
+	
+	
+	toPromise() {
+		let me = this;
+		
+		return new Promise((resolve, reject) => {
+			me.exec(function (err, data) {
+				if (err) return reject(err);
+				
+				resolve(data);
+			})
+		});
+	}
+	
+	
+	stream() {
+		let me = this;
+		
+		if (me.opts.debug) {
+			console.log('stream req headers', me.reqParams.headers);
 		}
-
-		// 'INSERT INTO t VALUES (1),(2),(3)' || 'SELECT date, count() FROM log WHERE siteId = '123'
-		else if (opts.query && ! opts.body) {
-			if (!opts.query.match(/^(insert|create|drop|alter)/i)) {
-				opts.query += ' FORMAT TabSeparatedWithNamesAndTypes';
-			}
-
-			opts.body  = opts.query;
-			opts.query = '';
-			url        = me.getHost();
-		}
-
-		var reqParams = {
-			url     : url,
-			body    : opts.body,
-			headers : {
-				'Content-Type': 'text/plain'
-			}
-		};
-
-		if (cb) {
-			return request.post(
-				reqParams,
-				function (error, response, body) {
-					if (error)                                                        return cb(error);
-
-					if (response.statusCode == 200 && response.statusMessage == 'OK') return cb(null, me._parseData(body));
-
-					// Если попали сюда - значит что-то пошло не так
-					cb(response.body || response.statusMessage);
+		
+		if (me.isInsert) {
+			class Rs extends stream.Transform {
+				constructor(reqParams) {
+					super();
+					
+					let me = this;
+					
+					me.ws = request.post(reqParams);
+					
+					me.isPiped = false;
+					
+					// Без этого обработчика и вызова read Transform не отрабатывает до конца
+					// https://nodejs.org/api/stream.html#stream_implementing_a_transform_stream
+					// Writing data while the stream is not draining is particularly problematic for a Transform,
+					// because the Transform streams are paused by default until they are piped or
+					// an 'data' or 'readable' event handler is added.
+					me.on('readable', function () {
+						let data = me.read();
+					});
+					
+					me.pipe(me.ws);
+					
+					me.on('pipe', function () {
+						me.isPiped = true;
+					});
 				}
-			);
+				
+				_transform(chunk, encoding, cb) {
+					cb(null, chunk);
+				}
+				
+				writeRow(data) {
+					let isOk = this.write(
+						data.join('\t') + '\n'
+					);
+					
+					this.rowCount++;
+					
+					if (isOk) {
+						return Promise.resolve();
+					} else {
+						return new Promise((resolve, reject) => {
+							this.ws.once('drain', err => {
+								if (err) return reject(err);
+								
+								resolve();
+							})
+						});
+					}
+				}
+				
+				
+				exec() {
+					let me = this;
+					
+					return new Promise((resolve, reject) => {
+						let error = null;
+						
+						me.ws
+							.on('error', function(err) {
+								error = err;
+							})
+							.on('response', function (res) {
+								if (error) return reject(error);
+								
+								if (res.statusCode === 200) {
+									return resolve({ r: 1 });
+								} else {
+									return reject(
+										getErrorObj(res)
+									)
+								}
+							});
+						
+						if ( ! me.isPiped) {
+							me.end();
+						}
+					});
+				}
+			}
+			
+			let rs = new Rs(this.reqParams);
+			rs.query = this.query;
+			return rs;
 		} else {
-			let rs = new stream.Readable();
-			rs._read = function (chunk) {
-				if (me.opts.debug) console.log('rs _read chunk', chunk);
+			let toJSON = JSONStream.parse(['data', true]);
+			
+			let rs = new stream.Readable({ 	objectMode: true });
+			rs._read = () => {};
+			rs.query = this.query;
+			
+			let tf = new stream.Transform({ objectMode: true });
+			let isFirstChunck = true;
+			tf._transform = function (chunk, encoding, cb) {
+				
+				// Если для первого chuck первый символ блока данных не '{', тогда:
+				// 1. в теле ответа не JSON
+				// 2. сервер нашел ошибку в данных запроса
+				if (isFirstChunck && chunk[0] !== 123) {
+					this.error = new Error(chunk.toString());
+					
+					toJSON.emit("error", this.error);
+					rs.emit('close');
+					
+					return cb();
+				}
+				
+				isFirstChunck = false;
+				
+				cb(null, chunk);
 			};
-
-			let queryStream = request.post(reqParams);
-			queryStream.columnsName = null;
-
-			let responseStatus = 200;
-			let str = '';
-
-			queryStream
-				.on('response', function (response) {
-					responseStatus = response.statusCode;
-				})
+			
+			let metaData = {};
+			
+			let requestStream = request.post(this.reqParams);
+			
+			// Не делаем .pipe(rs) потому что rs - Readable,
+			// а для pipe нужен Writable
+			let s = null;
+			if (me.opts.isUseGzip) {
+				const z = zlib.createGunzip();
+				s = requestStream.pipe(z).pipe(tf).pipe(toJSON)
+			} else {
+				s = requestStream.pipe(tf).pipe(toJSON)
+			}
+			
+			
+			s
 				.on('error', function (err) {
 					rs.emit('error', err);
 				})
+				.on('header', header => {
+					metaData = _.merge({}, header);
+				})
+				.on('footer', footer => {
+					rs.emit('meta', _.merge(metaData, footer));
+				})
 				.on('data', function (data) {
-					str  = str + data.toString('utf8');
-
-
-					if (responseStatus != 200) return rs.emit('error', str);
-
-
-					let lineSepIndex = str.lastIndexOf(lineSep);
-					if (lineSepIndex == -1) return true;
-
-
-					var rows = str.substr(0, lineSepIndex).split(lineSep);
-					str = str.substr(lineSepIndex + 1);
-
-
-					if ( ! queryStream.columnList) {
-						let columnList = rows[0].split('\t');
-						let typeList   = rows[1].split('\t');
-
-						// Удаляем строки с заголовками и типами столбцов И завершающую строку
-						//console.log('stream', rows, rows.length, rows.slice(2, rows.length - 1));
-            rows = rows.slice(2, rows.length);
-
-						queryStream.columnList = columnList.reduce(
-							function (arr, column, i) {
-								arr.push({
-									name : column,
-									type : typeList[i]
-								});
-
-								return arr;
-							},
-							[]
-						);
-
-						if (me.opts.debug) console.log('columns', queryStream.columnList);
-					}
-
-
-					if (me.opts.debug) console.log('raw data', data.toString('utf8'));
-
-
-					for(let i=0; i<rows.length; i++) {
-						let columns = rows[i].split('\t');
-						rs.emit(
-							'data',
-							queryStream.columnList.reduce(
-								(o, c, i) => {
-									o[c.name] = me.typeCast.cast(c.type, columns[i]);
-									return o;
-								},
-								{}
-							)
-						);
-					}
+					rs.emit('data', data);
+				})
+				.on('close', function () {
+					rs.emit('close');
 				})
 				.on('end', function () {
 					rs.emit('end');
 				});
-
+			
+			rs.__pause = rs.pause;
+			rs.pause  = () => {
+				rs.__pause();
+				requestStream.pause();
+				toJSON.pause();
+			};
+			
+			rs.__resume = rs.resume;
+			rs.resume = () => {
+				rs.__resume();
+				requestStream.resume();
+				toJSON.resume();
+			};
+			
 			return rs;
 		}
-	}
-
-
-	/**
-	 * Insert rows by one query
-	 * @param {String} tableName
-	 * @param {Array} values List or values. Each value is array of columns
-	 * @param {Function} cb
-	 * @returns
-	 */
-	insertMany(tableName, values, cb) {
-		var url = `INSERT INTO ${tableName} FORMAT TabSeparated`;
-
-		request.post(
-			{
-				url     : this.getHost() + '?query=' + url,
-				body    : values.map(function(row) {
-					return row.map(function(column) { return (typeof column === 'undefined' || column === null) ? '\\N' : jsesc(column); }).join('\t');
-				}).join('\n'),
-				headers : {
-					'Content-Type': 'text/plain'
-				}
-			},
-			function (error, response, body) {
-				if ( ! error && response.statusCode == 200) {
-					cb(null, body);
-				} else {
-					return cb(error || body);
-				}
-			}
-		);
 	}
 }
 
 
-module.exports = ClickHouse;
+class ClickHouse {
+	constructor(opts) {
+		this.opts = _.extend(
+			{
+				url: 'http://localhost',
+				port: 8123,
+				debug: false,
+				user: 'default',
+				password: '',
+				basicAuth: null,
+				isUseGzip: false,
+				config: {
+					// session_id                              : Date.now(),
+					session_timeout                         : 60,
+					output_format_json_quote_64bit_integers : 0,
+					enable_http_compression                 : 0
+				}
+			},
+			opts
+		);
+	}
+
+	get sessionId() {
+		return this.opts.config.session_id;
+	}
+
+	set sessionId(sessionId) {
+		this.opts.config.session_id = '' + sessionId;
+		return this;
+	}
+	
+	noSession() {
+		delete this.opts.config.session_id;
+		
+		return this;
+	}
+
+	get sessionTimeout() {
+		return this.opts.config.session_timeout;
+	}
+
+	set sessionTimeout(timeout) {
+		this.opts.config.session_timeout = timeout;
+		return this;
+	}
+
+	get url() {
+		let basicAuth = this.opts.basicAuth;
+		if (basicAuth) {
+			return `http://${basicAuth.username}:${basicAuth.password}@${this.opts.url}:${this.opts.port}`;
+		} else {
+			return `${this.opts.url}:${this.opts.port}`;
+		}
+	}
+
+	set url(url) {
+		this.opts.url = url;
+		return this;
+	}
+
+	get port() {
+		return this.opts.port;
+	}
+
+	set port(port) {
+		this.opts.port = port;
+		return this;
+	}
+	
+	
+	get isUseGzip() {
+		return this.opts.isUseGzip;
+	}
+	set isUseGzip(val) {
+		this.opts.isUseGzip = !!val;
+		
+		this.opts.config.enable_http_compression = this.opts.isUseGzip ? 1 : 0;
+	}
+	
+	
+	escape(str) {
+		return str.replace(/\t|\n/g, '\\t');
+	}
+	
+	
+	_mapRowAsArray(row) {
+		return row.map(function(value) {
+			return encodeValue(false, value, 'TabSeparated');
+		}).join('\t');
+	}
+	
+	
+	_mapRowAsObject(fieldList, row) {
+		return fieldList.map(f => encodeValue(false, row[f] || '', 'TabSeparated')).join('\t');
+	}
+	
+	
+	_getBodyForInsert(query, data) {
+		let values    = [],
+			fieldList = [];
+		
+		if (Array.isArray(data) && Array.isArray(data[0])) {
+			values = data;
+		} else {
+			values = [data];
+		}
+		
+		let isObject = Object.prototype.toString.call(values[0]) === '[object Object]';
+		
+		if (isObject) {
+			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/);
+			if (m) {
+				fieldList = m[2].split(',').map(s => s.trim());
+			} else {
+				throw new Error('insert query wasnt parsed field list after TABLE_NAME');
+			}
+		}
+		
+		return values.map(row => {
+			if (isObject) {
+				return this._mapRowAsObject(fieldList, row);
+			} else {
+				return this._mapRowAsArray(row);
+			}
+		}).join('\n');
+	}
+	
+	
+	_getReqParams(query, data) {
+		let me = this;
+		
+		let reqParams = {};
+		
+		if (typeof query === 'string') {
+			if (query.match(/^select/i)) {
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT JSON') + '&' + querystring.stringify(me.opts.config);
+				
+				if (data && data.external) {
+					let formData = {};
+					
+					for (let external of data.external) {
+						reqParams.url += `&${external.name}_structure=${external.structure || 'str String'}`;
+						
+						formData[external.name] = {
+							value: external.data.join('\n'),
+							options: {
+								filename: external.name,
+								contentType: 'text/plain'
+							}
+						}
+					}
+					
+					reqParams['formData'] = formData;
+				}
+			} else if (query.match(/^insert/i)) {
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT TabSeparated') + '&' + querystring.stringify(me.opts.config);
+				
+				if (data) {
+					reqParams['body'] = me._getBodyForInsert(query, data);
+				}
+			} else {
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query) + '&' + querystring.stringify(me.opts.config);
+			}
+			
+			reqParams['headers'] = {
+				'Content-Type': 'text/plain'
+			}
+		}
+		
+		if (me.opts.isUseGzip) {
+			//reqParams.headers['Content-Encoding'] = 'gzip';
+			reqParams.headers['Accept-Encoding']  = 'gzip';
+			// reqParams['gzip'] = true;
+		}
+		
+		if (me.opts.debug) console.log('DEBUG', reqParams);
+		
+		return reqParams;
+	}
+	
+	
+	query(sql, params) {
+		return new QueryCursor(sql, this._getReqParams(sql, params), this.opts);
+	}
+	
+	
+	insert(query, data) {
+		return new QueryCursor(query, this._getReqParams(query, data), this.opts);
+	}
+}
+
+module.exports = {
+	ClickHouse
+};
+
