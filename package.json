@@ -36,5 +36,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/TimonKK/clickhouse.git"
-  }
+  },
+  "keywords": [
+    "clickhouse"
+  ]
 }
