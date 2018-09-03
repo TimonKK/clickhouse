@@ -16,7 +16,6 @@ const
 			LIMIT ${rowCount}`;
 
 
-
 describe('Exec', () => {
 	it('should return not null object', async () => {
 		const sqlList = [
@@ -49,21 +48,21 @@ describe('Select', () => {
 	it('use callback', callback => {
 		clickhouse.query(sql).exec((err, rows) => {
 			expect(err).to.not.be.ok();
-
+			
 			expect(rows).to.have.length(rowCount);
 			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' })
-
+			
 			callback();
 		});
 	});
-
-
+	
+	
 	it('use stream', function(callback) {
 		this.timeout(10000);
-
+		
 		let i = 0;
 		let error = null;
-
+		
 		clickhouse.query(sql).stream()
 			.on('data', () => ++i)
 			.on('error', err => error = err)
@@ -74,8 +73,8 @@ describe('Select', () => {
 				callback();
 			})
 	});
-
-
+	
+	
 	it('use stream with pause/resume', function(callback) {
 		const
 			count = 10,
@@ -86,9 +85,9 @@ describe('Select', () => {
 		
 		let i     = 0,
 			error = null;
-
+		
 		const stream = clickhouse.query(`SELECT number FROM system.numbers LIMIT ${count}`).stream();
-
+		
 		stream
 			.on('data', () => {
 				++i;
@@ -106,7 +105,8 @@ describe('Select', () => {
 				callback();
 			})
 	});
-
+	
+	
 	// Waiting for Node.js 10
 	// it('use async for', async function() {
 	// 	let i = 0;
@@ -116,18 +116,18 @@ describe('Select', () => {
 	// 		expect(row).to.have.key('str');
 	// 		expect(row).to.have.key('date');
 	// 	}
-
+	// 
 	// 	expect(i).to.be(rowCount);
 	// });
-
+	
 	it('use promise and await/async', async () => {
 		let rows = await clickhouse.query(sql).toPromise();
-
+		
 		expect(rows).to.have.length(rowCount);
 		expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
 	});
 	
-										
+	
 	it('use select with external', async () => {
 		let result = await clickhouse.query('SELECT count(*) AS count FROM temp_table', {
 			external: [
@@ -150,7 +150,7 @@ describe('session', () => {
 	it('use session', async () => {
 		let sessionId = clickhouse.sessionId;
 		clickhouse.sessionId = Date.now();
-
+		
 		let result = await clickhouse.query(
 			`CREATE TEMPORARY TABLE test_table
 			(_id String, str String)
@@ -165,13 +165,54 @@ describe('session', () => {
 			ENGINE=Memory`
 		).toPromise();
 		expect(result2).to.be.ok();
-
+		
 		clickhouse.sessionId = sessionId;
 	});	
 });
 
 
 describe('queries', () => {
+	it('insert field as array', async () => {
+		clickhouse.sessionId = Date.now();
+		await clickhouse.query('CREATE DATABASE IF NOT EXISTS test').toPromise();
+		await clickhouse.query('use test').toPromise();
+		await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS test_array (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8)
+			) ENGINE=MergeTree(date, date, 8192)
+		`).toPromise();
+		
+		let rows = [
+			{
+				date: '1915-01-01',
+				str: 'Вам, проживающим за оргией оргию,',
+				arr: [],
+				arr2: ['1915-01-02', '1915-01-03'],
+				arr3: [1,2,3,4,5]
+			},
+			
+			{
+				date: '1915-02-01',
+				str: 'имеющим ванную и теплый клозет!',
+				arr: ['5670000000', 'asdas dasf'],
+				arr2: ['1915-02-02'],
+				arr3: []
+			}
+		];
+		
+		
+		let r = await clickhouse.insert('INSERT INTO test_array (date, arr, arr2, arr3)', rows).toPromise();
+		expect(r).to.be.ok();
+		
+		
+		clickhouse.sessionId = null;
+	});
+	
+	
 	it('queries', async () => {
 		let result = await clickhouse.query('DROP TABLE IF EXISTS session_temp').toPromise();
 		expect(result).to.be.ok();
@@ -190,7 +231,7 @@ describe('queries', () => {
 			'INSERT INTO session_temp', data 
 		).toPromise();
 		expect(result5).to.be.ok();
-
+		
 		let rows = await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp').toPromise();
 		expect(rows).to.be.ok();
 		expect(rows).to.have.length(1);
@@ -243,7 +284,6 @@ describe('queries', () => {
 });
 
 
-
 describe('response codes', () => {
 	it('table is not exists', async () => {	
 		try {
@@ -257,7 +297,7 @@ describe('response codes', () => {
 			expect(err).to.have.key('code');
 			expect(err.code).to.be(60);
 		}
-
+		
 		// try {
 		// 	let result = await clickhouse.query('DROP TABLE session_temp2').toPromise();
 		// 	expect(result).to.be.ok();

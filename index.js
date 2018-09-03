@@ -43,15 +43,20 @@ var ESCAPE_NULL = {
 	// JSONEachRow: "\\N",
 };
 
+// const R_DATE = /\d{4}-\d{2}-\d{2}/;
+// const R_DATETIME = /\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/;
+const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
 
-var R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
-
-function encodeValue(quote, v, format) {
+function encodeValue(quote, v, format, isArray) {
 	format = ALIASES[format] || format;
-
+	
 	switch (typeof v) {
 		case 'string':
-			return ESCAPE_STRING[format] ? ESCAPE_STRING[format] (v, quote) : v;
+			if (isArray) {
+				return `'${ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v}'`;
+			} else {
+				return ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v;
+			}
 		case 'number':
 			if (isNaN (v))
 				return 'nan';
@@ -63,20 +68,30 @@ function encodeValue(quote, v, format) {
 				return 'inf';
 			return v;
 		case 'object':
+			
 			// clickhouse allows to use unix timestamp in seconds
-			if (v instanceof Date)
-				return ("" + v.valueOf ()).substr (0, 10);
+			if (v instanceof Date) {
+				return ("" + v.valueOf()).substr (0, 10);
+			}
+			
 			// you can add array items
-			if (v instanceof Array)
-				return '[' + v.map (encodeValue.bind (this, true, format)).join (',') + ']'
+			if (v instanceof Array) {
+				// return '[' + v.map(encodeValue.bind(this, true, format)).join (',') + ']';
+				return '[' + v.map(function (i) {
+					return encodeValue(true, i, format, true);
+				}).join(',') + ']';
+			}
+			
 			// TODO: tuples support
-			if (!format) console.trace ();
-			if (v === null)
+			if (!format) {
+				console.trace ();
+			}
+			
+			if (v === null) {
 				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
-
+			}
+			
 			return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
-
-			console.warn ('Cannot stringify [Object]:', v);
 		case 'boolean':
 			return v === true ? 1 : 0;
 	}
@@ -84,9 +99,9 @@ function encodeValue(quote, v, format) {
 
 function encodeRow(row, format) {
 	format = ALIASES[format] || format;
-
+	
 	var encodedRow;
-
+	
 	if (Array.isArray (row)) {
 		encodedRow = row.map (function (field) {
 			return encodeValue (false, field, format);
@@ -97,7 +112,7 @@ function encodeRow(row, format) {
 			return encodedRowObject;
 		}.bind (this), {})) + "\n";
 	}
-
+	
 	return encodedRow;
 }
 
@@ -120,9 +135,16 @@ function getErrorObj(res) {
 	return err;
 }
 
+
+function isObject(obj) {
+	return Object.prototype.toString.call(obj) === '[object Object]';
+}
+
+
 class QueryCursor {
 	constructor(query, reqParams, opts) {
 		this.isInsert  = !!query.match(/^insert/i);
+		this.fieldList = null;
 		this.query     = query;
 		this.reqParams = _.merge({}, reqParams);
 		this.opts      = opts;
@@ -137,6 +159,14 @@ class QueryCursor {
 		}
 		
 		request.post(me.reqParams, (err, res) => {
+			if (me.opts.debug) {
+				console.log('exec', err, _.pick(res, [
+					'statusCode',
+					'body',
+					'statusMessage'
+				]));
+			}
+			
 			if (err) {
 				return cb(err);
 			} else if (res.statusCode !== 200) {
@@ -178,9 +208,11 @@ class QueryCursor {
 	
 	
 	stream() {
-		let me = this;
+		const
+			me      = this,
+			isDebug = me.opts.debug;
 		
-		if (me.opts.debug) {
+		if (isDebug) {
 			console.log('stream req headers', me.reqParams.headers);
 		}
 		
@@ -216,8 +248,16 @@ class QueryCursor {
 				}
 				
 				writeRow(data) {
+					let row = '';
+					
+					if (Array.isArray(data)) {
+						row = ClickHouse.mapRowAsArray(data);
+					} else if (isObject(data)) {
+						throw new Error('Sorry, but it is not work!');
+					}
+					
 					let isOk = this.write(
-						data.join('\t') + '\n'
+						row + '\n'
 					);
 					
 					this.rowCount++;
@@ -252,6 +292,14 @@ class QueryCursor {
 								if (res.statusCode === 200) {
 									return resolve({ r: 1 });
 								} else {
+									if (isDebug) {
+										console.log('insert exec', error, _.pick(res, [
+											'statusCode',
+											'body',
+											'statusMessage'
+										]));
+									}
+									
 									return reject(
 										getErrorObj(res)
 									)
@@ -372,11 +420,11 @@ class ClickHouse {
 			opts
 		);
 	}
-
+	
 	get sessionId() {
 		return this.opts.config.session_id;
 	}
-
+	
 	set sessionId(sessionId) {
 		this.opts.config.session_id = '' + sessionId;
 		return this;
@@ -387,16 +435,16 @@ class ClickHouse {
 		
 		return this;
 	}
-
+	
 	get sessionTimeout() {
 		return this.opts.config.session_timeout;
 	}
-
+	
 	set sessionTimeout(timeout) {
 		this.opts.config.session_timeout = timeout;
 		return this;
 	}
-
+	
 	get url() {
 		let basicAuth = this.opts.basicAuth;
 		if (basicAuth) {
@@ -405,16 +453,16 @@ class ClickHouse {
 			return `${this.opts.url}:${this.opts.port}`;
 		}
 	}
-
+	
 	set url(url) {
 		this.opts.url = url;
 		return this;
 	}
-
+	
 	get port() {
 		return this.opts.port;
 	}
-
+	
 	set port(port) {
 		this.opts.port = port;
 		return this;
@@ -436,7 +484,7 @@ class ClickHouse {
 	}
 	
 	
-	_mapRowAsArray(row) {
+	static mapRowAsArray(row) {
 		return row.map(function(value) {
 			return encodeValue(false, value, 'TabSeparated');
 		}).join('\t');
@@ -449,18 +497,23 @@ class ClickHouse {
 	
 	
 	_getBodyForInsert(query, data) {
-		let values    = [],
-			fieldList = [];
+		let values          = [],
+			fieldList       = [],
+			isFirstElObject = false;
 		
 		if (Array.isArray(data) && Array.isArray(data[0])) {
 			values = data;
-		} else {
+		} else if (Array.isArray(data) && isObject(data[0])) {
+			values = data;
+			isFirstElObject = true;
+		} else if (isObject(data)) {
 			values = [data];
+			isFirstElObject = true;
+		} else {
+			throw new Error('ClickHouse._getBodyForInsert: data is invalid format');
 		}
 		
-		let isObject = Object.prototype.toString.call(values[0]) === '[object Object]';
-		
-		if (isObject) {
+		if (isFirstElObject) {
 			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/);
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
@@ -470,10 +523,10 @@ class ClickHouse {
 		}
 		
 		return values.map(row => {
-			if (isObject) {
+			if (isFirstElObject) {
 				return this._mapRowAsObject(fieldList, row);
 			} else {
-				return this._mapRowAsArray(row);
+				return ClickHouse.mapRowAsArray(row);
 			}
 		}).join('\n');
 	}
@@ -485,8 +538,10 @@ class ClickHouse {
 		let reqParams = {};
 		
 		if (typeof query === 'string') {
-			if (query.match(/^select/i)) {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT JSON') + '&' + querystring.stringify(me.opts.config);
+			let sql = query.trim();
+			
+			if (sql.match(/^(select|show)/i)) {
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(me.opts.config);
 				
 				if (data && data.external) {
 					let formData = {};
@@ -526,7 +581,9 @@ class ClickHouse {
 			// reqParams['gzip'] = true;
 		}
 		
-		if (me.opts.debug) console.log('DEBUG', reqParams);
+		if (me.opts.debug) {
+			console.log('DEBUG', reqParams);
+		}
 		
 		return reqParams;
 	}
