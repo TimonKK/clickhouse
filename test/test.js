@@ -7,7 +7,7 @@ const
 
 const
 	clickhouse = new ClickHouse({debug: false}),
-	rowCount   = _.random(50 * 1024, 1024 * 1024)
+	rowCount   = _.random(50 * 1024, 1024 * 1024),
 	sql        = `SELECT
 				number,
 				toString(number * 2) AS str,
@@ -36,8 +36,8 @@ describe('Exec', () => {
 			'OPTIMIZE TABLE session_temp PARTITION 201807 FINAL'
 		];
 		
-		for(let query of sqlList) {
-			let r = await clickhouse.query(sql).toPromise();
+		for(const query of sqlList) {
+			const r = await clickhouse.query(query).toPromise();
 			
 			expect(r).to.be.ok();
 		}
@@ -50,7 +50,7 @@ describe('Select', () => {
 			expect(err).to.not.be.ok();
 			
 			expect(rows).to.have.length(rowCount);
-			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' })
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
 			
 			callback();
 		});
@@ -71,14 +71,14 @@ describe('Select', () => {
 				expect(i).to.be(rowCount);
 				
 				callback();
-			})
+			});
 	});
 	
 	
 	it('use stream with pause/resume', function(callback) {
 		const
 			count = 10,
-			pause = 1000;
+			pause = 1000,
 			ts    = Date.now();
 		
 		this.timeout(count * pause * 2);
@@ -129,7 +129,7 @@ describe('Select', () => {
 	
 	
 	it('use select with external', async () => {
-		let result = await clickhouse.query('SELECT count(*) AS count FROM temp_table', {
+		const result = await clickhouse.query('SELECT count(*) AS count FROM temp_table', {
 			external: [
 				{
 					name: 'temp_table',
@@ -141,17 +141,17 @@ describe('Select', () => {
 		expect(result).to.be.ok();
 		expect(result).to.have.length(1);
 		expect(result[0]).to.have.key('count');
-		expect(result[0].count).to.be(rowCount)
+		expect(result[0].count).to.be(rowCount);
 	});	
 });
 
 
 describe('session', () => {
 	it('use session', async () => {
-		let sessionId = clickhouse.sessionId;
+		const sessionId = clickhouse.sessionId;
 		clickhouse.sessionId = Date.now();
 		
-		let result = await clickhouse.query(
+		const result = await clickhouse.query(
 			`CREATE TEMPORARY TABLE test_table
 			(_id String, str String)
 			ENGINE=Memory`
@@ -159,7 +159,7 @@ describe('session', () => {
 		expect(result).to.be.ok();
 		
 		clickhouse.sessionId = Date.now();
-		let result2 = await clickhouse.query(
+		const result2 = await clickhouse.query(
 			`CREATE TEMPORARY TABLE test_table
 			(_id String, str String)
 			ENGINE=Memory`
@@ -186,7 +186,7 @@ describe('queries', () => {
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
 		
-		let rows = [
+		const rows = [
 			{
 				date: '1915-01-01',
 				str: 'Вам, проживающим за оргией оргию,',
@@ -205,7 +205,7 @@ describe('queries', () => {
 		];
 		
 		
-		let r = await clickhouse.insert('INSERT INTO test_array (date, arr, arr2, arr3)', rows).toPromise();
+		const r = await clickhouse.insert('INSERT INTO test_array (date, arr, arr2, arr3)', rows).toPromise();
 		expect(r).to.be.ok();
 		
 		
@@ -214,35 +214,35 @@ describe('queries', () => {
 	
 	
 	it('queries', async () => {
-		let result = await clickhouse.query('DROP TABLE IF EXISTS session_temp').toPromise();
+		const result = await clickhouse.query('DROP TABLE IF EXISTS session_temp').toPromise();
 		expect(result).to.be.ok();
 		
-		let result2 = await clickhouse.query('DROP TABLE IF EXISTS session_temp2').toPromise();
+		const result2 = await clickhouse.query('DROP TABLE IF EXISTS session_temp2').toPromise();
 		expect(result2).to.be.ok();
 		
-		let result3 = await clickhouse.query('CREATE TABLE session_temp (str String) ENGINE=MergeTree PARTITION BY tuple() ORDER BY tuple()').toPromise();
+		const result3 = await clickhouse.query('CREATE TABLE session_temp (str String) ENGINE=MergeTree PARTITION BY tuple() ORDER BY tuple()').toPromise();
 		expect(result3).to.be.ok();
 		
-		let result4 = await clickhouse.query('CREATE TABLE session_temp2 (str String) ENGINE=MergeTree PARTITION BY tuple() ORDER BY tuple()').toPromise();
+		const result4 = await clickhouse.query('CREATE TABLE session_temp2 (str String) ENGINE=MergeTree PARTITION BY tuple() ORDER BY tuple()').toPromise();
 		expect(result4).to.be.ok();
 		
-		let data = _.range(0, rowCount).map(r => [r]);
-		let result5 = await clickhouse.insert(
+		const data = _.range(0, rowCount).map(r => [r]);
+		const result5 = await clickhouse.insert(
 			'INSERT INTO session_temp', data 
 		).toPromise();
 		expect(result5).to.be.ok();
 		
-		let rows = await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp').toPromise();
+		const rows = await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp').toPromise();
 		expect(rows).to.be.ok();
 		expect(rows).to.have.length(1);
 		expect(rows[0]).to.have.key('count');
 		expect(rows[0].count).to.be(data.length);
 		expect(rows[0].count).to.be(rowCount);
 		
-		let result6 = await clickhouse.query('TRUNCATE TABLE session_temp').toPromise();
+		const result6 = await clickhouse.query('TRUNCATE TABLE session_temp').toPromise();
 		expect(result6).to.be.ok();
 		
-		let ws = clickhouse.insert('INSERT INTO session_temp').stream();
+		const ws = clickhouse.insert('INSERT INTO session_temp').stream();
 		let count = 0;
 		
 		for(let i = 1; i <= rowCount; i++) {
@@ -255,15 +255,14 @@ describe('queries', () => {
 			);
 			++count;
 		}
-		let result7 = await ws.exec();
+		const result7 = await ws.exec();
 		expect(result7).to.be.ok();
 		expect(count).to.be(rowCount);
 		
 		clickhouse.isUseGzip = true;
-		let ts = Date.now();
-		let rs = clickhouse.query(sql).stream();
+		const rs = clickhouse.query(sql).stream();
 		
-		let tf = new stream.Transform({
+		const tf = new stream.Transform({
 			objectMode : true,
 			transform  : function (chunk, enc, cb) {
 				cb(null, JSON.stringify(chunk) + '\n');
@@ -271,14 +270,14 @@ describe('queries', () => {
 		});
 		
 		clickhouse.sessionId = Date.now();
-		let ws2 = clickhouse.insert('INSERT INTO session_temp2').stream();
+		const ws2 = clickhouse.insert('INSERT INTO session_temp2').stream();
 		
-		let result8 = await rs.pipe(tf).pipe(ws2).exec();
+		const result8 = await rs.pipe(tf).pipe(ws2).exec();
 		expect(result8).to.be.ok();
 		clickhouse.isUseGzip = false;
 		
-		let result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
-		let result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
+		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
+		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
 	});
 });
@@ -287,7 +286,7 @@ describe('queries', () => {
 describe('response codes', () => {
 	it('table is not exists', async () => {	
 		try {
-			let result = await clickhouse.query('DROP TABLE session_temp').toPromise();
+			const result = await clickhouse.query('DROP TABLE session_temp').toPromise();
 			expect(result).to.be.ok();
 			
 			await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp').toPromise();
