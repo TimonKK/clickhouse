@@ -7,11 +7,9 @@
   },
   "dependencies": {
     "JSONStream": "1.3.4",
-    "async": "2.0.0-rc.6",
-    "jsesc": "2.2.0",
-    "lodash": "4.13.1",
+    "lodash": "^4.17.11",
     "querystring": "0.2.0",
-    "request": "2.72.0"
+    "request": "^2.88.0"
   },
   "description": "Client for ClickHouse",
   "devDependencies": {
