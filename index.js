@@ -7,8 +7,7 @@ const
 	request      = require('request'),
 	stream       = require('stream'),
 	querystring  = require('querystring'),
-	JSONStream   = require('JSONStream'),
-	jsesc        = require('jsesc');
+	JSONStream   = require('JSONStream');
 
 
 /**
