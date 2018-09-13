@@ -38,7 +38,7 @@ const clickhouse = new ClickHouse({
 
 ```javascript
 // exec query
-let queries = [
+const queries = [
 	'DROP TABLE IF EXISTS session_temp',
 
 	`CREATE TABLE session_temp (
@@ -56,8 +56,8 @@ let queries = [
 	'OPTIMIZE TABLE ukit.loadstat PARTITION 201807 FINAL'
 ];
 
-for(let query of queries) {
-	let r = await clickhouse.query(query).toPromise();
+for(const query of queries) {
+	const r = await clickhouse.query(query).toPromise();
 
 	console.log(query, r);
 }
@@ -84,14 +84,14 @@ clickhouse.query(`SELECT number FROM system.numbers LIMIT 10`).stream()
 	})
 	.on('end', () => {
 		...
-	})
+	});
 
 
 // as promise
-let rows = await clickhouse.query(query).toPromise();
+const rows = await clickhouse.query(query).toPromise();
 
 // use query with external data
-let rows = await clickhouse.query('SELECT * AS count FROM temp_table', {
+const rows = await clickhouse.query('SELECT * AS count FROM temp_table', {
 	external: [
 		{
 			name: 'temp_table',
@@ -103,7 +103,7 @@ let rows = await clickhouse.query('SELECT * AS count FROM temp_table', {
 
 // set session
 clickhouse.sessionId = '...';
-let r = await clickhouse.query(
+const r = await clickhouse.query(
 	`CREATE TEMPORARY TABLE test_table
 	(_id String, str String)
 	ENGINE=Memory`
@@ -111,7 +111,7 @@ let r = await clickhouse.query(
 
 
 // insert stream
-let ws = clickhouse.insert('INSERT INTO session_temp').stream();
+const ws = clickhouse.insert('INSERT INTO session_temp').stream();
 for(let i = 0; i <= 1000; i++) {
 	await ws.writeRow(
 		[
@@ -123,13 +123,13 @@ for(let i = 0; i <= 1000; i++) {
 }
 
 //wait stream finish
-let result = await s.exec();
+const result = await ws.exec();
 
 
 // pipe readable stream to writable stream (across transform)
-let rs = clickhouse.query(query).stream();
+const rs = clickhouse.query(query).stream();
 
-let tf = new stream.Transform({
+const tf = new stream.Transform({
 	objectMode : true,
 	transform  : function (chunk, enc, cb) {
 		cb(null, JSON.stringify(chunk) + '\n');
@@ -137,7 +137,7 @@ let tf = new stream.Transform({
 });
 
 clickhouse.sessionId = Date.now();
-let ws = clickhouse.insert('INSERT INTO session_temp2').stream();
+const ws = clickhouse.insert('INSERT INTO session_temp2').stream();
 
-let result = await rs.pipe(tf).pipe(ws).exec();
+const result = await rs.pipe(tf).pipe(ws).exec();
 ```
