@@ -188,7 +188,7 @@ describe('queries', () => {
 		
 		const rows = [
 			{
-				date: '1915-01-01',
+				date: '2018-01-01',
 				str: 'Вам, проживающим за оргией оргию,',
 				arr: [],
 				arr2: ['1915-01-02', '1915-01-03'],
@@ -196,7 +196,7 @@ describe('queries', () => {
 			},
 			
 			{
-				date: '1915-02-01',
+				date: '2018-02-01',
 				str: 'имеющим ванную и теплый клозет!',
 				arr: ['5670000000', 'asdas dasf'],
 				arr2: ['1915-02-02'],
@@ -279,6 +279,15 @@ describe('queries', () => {
 		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
+
+		const result11 = await clickhouse.query('SELECT date FROM test.test_array GROUP BY date WITH TOTALS').toPromiseRaw();
+		expect(result11).to.have.key('totals');	
+		expect(result11).to.have.key('data');
+		expect(result11).to.have.key('statistics');
+
+		const result12 = await clickhouse.query('SELECT date, count() AS totals_count FROM test.test_array GROUP BY date WITH TOTALS').toPromiseRaw('totals');
+		expect(result12).to.have.key('totals_count');
+		expect(result12.totals_count).to.have.greaterThan(0);
 	});
 });
 

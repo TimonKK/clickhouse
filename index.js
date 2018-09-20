@@ -149,8 +149,11 @@ class QueryCursor {
 		this.opts      = opts;
 	}
 	
-	
 	exec(cb) {
+		this.execRaw(cb, 'data');
+	}
+	
+	execRaw(cb, value) {
 		let me = this;
 		
 		if (me.opts.debug) {
@@ -185,23 +188,29 @@ class QueryCursor {
 			try {
 				let json = JSON.parse(res.body);
 				
-				cb(null, json.data);
+				cb(null, value ? json[value] : json);
 			} catch (err2) {
 				cb(err2);
 			}
 		});
 	}
-	
-	
+
+
 	toPromise() {
+		return this.toPromiseRaw('data');
+	}	
+
+
+	toPromiseRaw(value) {
 		let me = this;
+		const useValue = value;
 		
 		return new Promise((resolve, reject) => {
-			me.exec(function (err, data) {
+			me.execRaw(function (err, data) {
 				if (err) return reject(err);
 				
 				resolve(data);
-			})
+			}, useValue)
 		});
 	}
 	
