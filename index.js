@@ -128,6 +128,7 @@ class QueryCursor {
 		this.query     = query;
 		this.reqParams = _.merge({}, reqParams);
 		this.opts      = opts;
+		this.useTotals = false;
 	}
 	
 	
@@ -166,13 +167,17 @@ class QueryCursor {
 			try {
 				let json = JSON.parse(res.body);
 				
-				cb(null, json.data);
+				cb(null, me.useTotals ? json : json.data);
 			} catch (err2) {
 				cb(err2);
 			}
 		});
 	}
 	
+	withTotals() {
+		this.useTotals  = true;
+		return this;
+	}
 	
 	toPromise() {
 		let me = this;
