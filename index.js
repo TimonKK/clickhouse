@@ -96,25 +96,6 @@ function encodeValue(quote, v, format, isArray) {
 	}
 }
 
-function encodeRow(row, format) {
-	format = ALIASES[format] || format;
-	
-	var encodedRow;
-	
-	if (Array.isArray (row)) {
-		encodedRow = row.map (function (field) {
-			return encodeValue (false, field, format);
-		}.bind (this)).join (SEPARATORS[format]) + "\n";
-	} else if (row.toString () === "[object Object]" && format === "JSONEachRow") {
-		encodedRow = JSON.stringify (Object.keys (row).reduce (function (encodedRowObject, k) {
-			encodedRowObject[k] = encodeValue (false, row[k], format);
-			return encodedRowObject;
-		}.bind (this), {})) + "\n";
-	}
-	
-	return encodedRow;
-}
-
 function getErrorObj(res) {
 	let err = new Error(`${res.statusCode}: ${res.body || res.statusMessage}`);
 	
