@@ -475,18 +475,9 @@ class ClickHouse {
 		}).join('\t');
 	}
 	
-	_convertTypes(value) {
-		if (value===true) {
-			return '1'
-		}
-		if (value===false) {
-			return '0'
-		}
-		return value != null ? value : ''
-	}
 	
 	_mapRowAsObject(fieldList, row) {
-		return fieldList.map(f => encodeValue(false, this._convertTypes(row[f]), 'TabSeparated')).join('\t');
+		return fieldList.map(f => encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated')).join('\t');
 	}
 	
 	
