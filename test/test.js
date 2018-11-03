@@ -286,6 +286,19 @@ describe('queries', () => {
 		expect(result11).to.have.key('totals');
 		expect(result11).to.have.key('rows');
 		expect(result11).to.have.key('statistics');
+		
+		const result11 = await clickhouse.query('DROP TABLE IF EXISTS test_int_temp').toPromise();
+		expect(result11).to.be.ok();
+
+		const result12 = await clickhouse.query('CREATE TABLE test_int_temp (int_value Int8 ) ENGINE=Memory').toPromise();
+		expect(result12).to.be.ok();
+
+		const int_value_data = [{int_value: 0}]
+		const result13 = await clickhouse.insert('INSERT INTO test_int_temp (int_value)', int_value_data).toPromise();
+		expect(result13).to.be.ok();
+
+		const result14 = await clickhouse.query('SELECT int_value FROM test_int_temp').toPromise();
+		expect(result14).to.eql(int_value_data);
 	});
 });
 
