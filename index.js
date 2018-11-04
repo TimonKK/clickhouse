@@ -477,7 +477,7 @@ class ClickHouse {
 	
 	
 	_mapRowAsObject(fieldList, row) {
-		return fieldList.map(f => encodeValue(false, row[f] || '', 'TabSeparated')).join('\t');
+		return fieldList.map(f => encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated')).join('\t');
 	}
 	
 	
