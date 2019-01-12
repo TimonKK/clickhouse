@@ -574,8 +574,12 @@ class ClickHouse {
 	}
 	
 	
-	query(sql, params) {
-		return new QueryCursor(sql, this._getReqParams(sql, params), this.opts);
+	query(...args) {
+		if (args.length === 2 && typeof args[args.length - 1] === 'function') {
+			return new QueryCursor(args[0], this._getReqParams(args[0], null), this.opts).exec(args[args.length - 1]);
+		} else {
+			return new QueryCursor(args[0], this._getReqParams(args[0], args[1]), this.opts);
+		}
 	}
 	
 	

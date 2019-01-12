@@ -57,6 +57,18 @@ describe('Select', () => {
 	});
 	
 	
+	it('use callback #2', callback => {
+		clickhouse.query(sql, (err, rows) => {
+			expect(err).to.not.be.ok();
+			
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+			
+			callback();
+		});
+	});
+	
+	
 	it('use stream', function(callback) {
 		this.timeout(10000);
 		
@@ -279,7 +291,7 @@ describe('queries', () => {
 		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
-
+		
 		const result11 = await clickhouse.query('SELECT date FROM test.test_array GROUP BY date WITH TOTALS').withTotals().toPromise();
 		expect(result11).to.have.key('meta');	
 		expect(result11).to.have.key('data');	
@@ -287,16 +299,16 @@ describe('queries', () => {
 		expect(result11).to.have.key('rows');
 		expect(result11).to.have.key('statistics');
 		
-		const result11 = await clickhouse.query('DROP TABLE IF EXISTS test_int_temp').toPromise();
-		expect(result11).to.be.ok();
-
+		const result111 = await clickhouse.query('DROP TABLE IF EXISTS test_int_temp').toPromise();
+		expect(result111).to.be.ok();
+		
 		const result12 = await clickhouse.query('CREATE TABLE test_int_temp (int_value Int8 ) ENGINE=Memory').toPromise();
 		expect(result12).to.be.ok();
-
+		
 		const int_value_data = [{int_value: 0}]
 		const result13 = await clickhouse.insert('INSERT INTO test_int_temp (int_value)', int_value_data).toPromise();
 		expect(result13).to.be.ok();
-
+		
 		const result14 = await clickhouse.query('SELECT int_value FROM test_int_temp').toPromise();
 		expect(result14).to.eql(int_value_data);
 	});
