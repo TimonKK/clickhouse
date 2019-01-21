@@ -4,10 +4,14 @@ const
 	_              = require('lodash'),
 	{ ClickHouse } = require('../.');
 
+const database = 'test_' + _.random(1000, 100000);
 
 const
-	clickhouse = new ClickHouse({debug: false}),
-	rowCount   = _.random(50 * 1024, 1024 * 1024),
+	clickhouse = new ClickHouse({
+		database : database,
+		debug    : false
+	}),
+	rowCount   = 7,//_.random(50 * 1024, 1024 * 1024),
 	sql        = `SELECT
 				number,
 				toString(number * 2) AS str,
@@ -15,6 +19,12 @@ const
 			FROM system.numbers
 			LIMIT ${rowCount}`;
 
+before(async () => {
+	const temp = new ClickHouse();
+	
+	await temp.query(`DROP DATABASE IF EXISTS ${database}`).toPromise();
+	await temp.query(`CREATE DATABASE ${database}`).toPromise();
+});
 
 describe('Exec', () => {
 	it('should return not null object', async () => {
@@ -128,7 +138,7 @@ describe('Select', () => {
 	// 		expect(row).to.have.key('str');
 	// 		expect(row).to.have.key('date');
 	// 	}
-	// 
+	//
 	// 	expect(i).to.be(rowCount);
 	// });
 	
@@ -154,7 +164,7 @@ describe('Select', () => {
 		expect(result).to.have.length(1);
 		expect(result[0]).to.have.key('count');
 		expect(result[0].count).to.be(rowCount);
-	});	
+	});
 });
 
 
@@ -179,16 +189,15 @@ describe('session', () => {
 		expect(result2).to.be.ok();
 		
 		clickhouse.sessionId = sessionId;
-	});	
+	});
 });
 
 
 describe('queries', () => {
 	it('insert field as array', async () => {
 		clickhouse.sessionId = Date.now();
-		await clickhouse.query('CREATE DATABASE IF NOT EXISTS test').toPromise();
-		await clickhouse.query('use test').toPromise();
-		await clickhouse.query(`
+		
+		const r = await clickhouse.query(`
 			CREATE TABLE IF NOT EXISTS test_array (
 				date Date,
 				str String,
@@ -197,6 +206,7 @@ describe('queries', () => {
 				arr3 Array(UInt8)
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
+		expect(r).to.be.ok();
 		
 		const rows = [
 			{
@@ -217,8 +227,8 @@ describe('queries', () => {
 		];
 		
 		
-		const r = await clickhouse.insert('INSERT INTO test_array (date, arr, arr2, arr3)', rows).toPromise();
-		expect(r).to.be.ok();
+		const r2 = await clickhouse.insert('INSERT INTO test_array (date, str, arr, arr2, arr3)', rows).toPromise();
+		expect(r2).to.be.ok();
 		
 		
 		clickhouse.sessionId = null;
@@ -240,7 +250,7 @@ describe('queries', () => {
 		
 		const data = _.range(0, rowCount).map(r => [r]);
 		const result5 = await clickhouse.insert(
-			'INSERT INTO session_temp', data 
+			'INSERT INTO session_temp', data
 		).toPromise();
 		expect(result5).to.be.ok();
 		
@@ -292,9 +302,9 @@ describe('queries', () => {
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
 		
-		const result11 = await clickhouse.query('SELECT date FROM test.test_array GROUP BY date WITH TOTALS').withTotals().toPromise();
-		expect(result11).to.have.key('meta');	
-		expect(result11).to.have.key('data');	
+		const result11 = await clickhouse.query('SELECT date FROM test_array GROUP BY date WITH TOTALS').withTotals().toPromise();
+		expect(result11).to.have.key('meta');
+		expect(result11).to.have.key('data');
 		expect(result11).to.have.key('totals');
 		expect(result11).to.have.key('rows');
 		expect(result11).to.have.key('statistics');
@@ -305,7 +315,7 @@ describe('queries', () => {
 		const result12 = await clickhouse.query('CREATE TABLE test_int_temp (int_value Int8 ) ENGINE=Memory').toPromise();
 		expect(result12).to.be.ok();
 		
-		const int_value_data = [{int_value: 0}]
+		const int_value_data = [{int_value: 0}];
 		const result13 = await clickhouse.insert('INSERT INTO test_int_temp (int_value)', int_value_data).toPromise();
 		expect(result13).to.be.ok();
 		
@@ -316,7 +326,7 @@ describe('queries', () => {
 
 
 describe('response codes', () => {
-	it('table is not exists', async () => {	
+	it('table is not exists', async () => {
 		try {
 			const result = await clickhouse.query('DROP TABLE session_temp').toPromise();
 			expect(result).to.be.ok();
@@ -332,7 +342,7 @@ describe('response codes', () => {
 		// try {
 		// 	let result = await clickhouse.query('DROP TABLE session_temp2').toPromise();
 		// 	expect(result).to.be.ok();
-			
+		
 		// 	await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp2').toPromise();
 		// 	expect().fail('You should not be here2');
 		// } catch (err) {
@@ -340,5 +350,26 @@ describe('response codes', () => {
 		// 	expect(err).to.have.key('code');
 		// 	expect(err.code).to.be(60);
 		// }
+	});
+});
+
+
+
+describe('set database', () => {
+	it('create instance with non-default database', async () => {
+		const noDefaultDb = 'default_' + _.random(1000, 10000);
+		const r = await clickhouse.query(`CREATE DATABASE ${noDefaultDb}`).toPromise();
+		expect(r).to.be.ok();
+		
+		const temp = new ClickHouse({
+			database: noDefaultDb
+		});
+		
+		
+		const result3 = await temp.query('CREATE TABLE session_temp (str String) ENGINE=MergeTree PARTITION BY tuple() ORDER BY tuple()').toPromise();
+		expect(result3).to.be.ok();
+		
+		const r2 = await temp.query(`DROP DATABASE ${noDefaultDb}`).toPromise();
+		expect(r2).to.be.ok();
 	});
 });

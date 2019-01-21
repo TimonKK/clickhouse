@@ -42,8 +42,6 @@ var ESCAPE_NULL = {
 	// JSONEachRow: "\\N",
 };
 
-// const R_DATE = /\d{4}-\d{2}-\d{2}/;
-// const R_DATETIME = /\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/;
 const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
 
 function encodeValue(quote, v, format, isArray) {
@@ -391,6 +389,7 @@ class ClickHouse {
 				url: 'http://localhost',
 				port: 8123,
 				debug: false,
+				database: 'default',
 				user: 'default',
 				password: '',
 				basicAuth: null,
@@ -520,13 +519,18 @@ class ClickHouse {
 	_getReqParams(query, data) {
 		let me = this;
 		
-		let reqParams = {};
+		let reqParams = {},
+			configQS = _.merge({}, me.opts.config);
+		
+		if (me.opts.database) {
+			configQS.database = me.opts.database;
+		}
 		
 		if (typeof query === 'string') {
 			let sql = query.trim();
 			
 			if (sql.match(/^(select|show)/i)) {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(me.opts.config);
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(configQS);
 				
 				if (data && data.external) {
 					let formData = {};
@@ -546,13 +550,13 @@ class ClickHouse {
 					reqParams['formData'] = formData;
 				}
 			} else if (query.match(/^insert/i)) {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT TabSeparated') + '&' + querystring.stringify(me.opts.config);
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT TabSeparated') + '&' + querystring.stringify(configQS);
 				
 				if (data) {
 					reqParams['body'] = me._getBodyForInsert(query, data);
 				}
 			} else {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query) + '&' + querystring.stringify(me.opts.config);
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query) + '&' + querystring.stringify(configQS);
 			}
 			
 			reqParams['headers'] = {
