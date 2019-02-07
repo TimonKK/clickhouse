@@ -11,7 +11,7 @@ const
 		database : database,
 		debug    : false
 	}),
-	rowCount   = 7,//_.random(50 * 1024, 1024 * 1024),
+	rowCount   = _.random(50 * 1024, 128 * 1024),
 	sql        = `SELECT
 				number,
 				toString(number * 2) AS str,
@@ -129,18 +129,23 @@ describe('Select', () => {
 	});
 	
 	
-	// Waiting for Node.js 10
-	// it('use async for', async function() {
-	// 	let i = 0;
-	// 	for await (const row of await clickhouse.query(sql).stream()) {
-	// 		++i;
-	// 		expect(row).to.have.key('number');
-	// 		expect(row).to.have.key('str');
-	// 		expect(row).to.have.key('date');
-	// 	}
-	//
-	// 	expect(i).to.be(rowCount);
-	// });
+	const nodeVersion = process.version.split('.')[0].substr(1);
+	if (parseInt(nodeVersion, 10) >= 10) {
+		it('use async for', async function() {
+			let i = 0;
+			
+			for await (const row of clickhouse.query(sql).stream()) {
+				++i;
+				expect(row).to.have.key('number');
+				expect(row).to.have.key('str');
+				expect(row).to.have.key('date');
+				console.log('i', i)
+			}
+			
+			expect(i).to.be(rowCount);
+		});
+	}
+	
 	
 	it('use promise and await/async', async () => {
 		let rows = await clickhouse.query(sql).toPromise();
@@ -189,6 +194,60 @@ describe('session', () => {
 		expect(result2).to.be.ok();
 		
 		clickhouse.sessionId = sessionId;
+	});
+});
+
+
+// You can use all settings from request library (https://github.com/request/request#tlsssl-protocol)
+describe('TLS/SSL Protocol', () => {
+	it('use TLS/SSL Protocol', async () => {
+		const
+			https = require('https'),
+			fs    = require('fs');
+		
+		let server = null;
+		
+		try {
+			server = https.createServer(
+				{
+					key  : fs.readFileSync('test/cert/server.key'),
+					cert : fs.readFileSync('test/cert/server.crt')
+				},
+				(req, res) => {
+					res.writeHead(200);
+					res.end('{\n\t"meta":\n\t[\n\t\t{\n\t\t\t"name": "plus(1, 1)",\n\t\t\t"type": "UInt16"\n\t\t}\n\t],\n\n\t"data":\n\t[\n\t\t{\n\t\t\t"plus(1, 1)": 2\n\t\t}\n\t],\n\n\t"rows": 1,\n\n\t"statistics":\n\t{\n\t\t"elapsed": 0.000037755,\n\t\t"rows_read": 1,\n\t\t"bytes_read": 1\n\t}\n}\n');
+				})
+				.listen(8000);
+			
+			const temp = new ClickHouse({
+				url       : 'https://localhost',
+				port      : 8000,
+				reqParams : {
+					agentOptions: {
+						ca: fs.readFileSync('test/cert/server.crt'),
+						cert: fs.readFileSync('test/cert/server.crt'),
+						key: fs.readFileSync('test/cert/server.key'),
+					}
+				}
+			});
+			
+			
+			const r = await temp.query('SELECT 1 + 1').toPromise();
+			
+			expect(r).to.be.ok();
+			expect(r[0]).to.have.key('plus(1, 1)');
+			expect(r[0]['plus(1, 1)']).to.be(2);
+			
+			if (server) {
+				server.close();
+			}
+		} catch(err) {
+			if (server) {
+				server.close();
+			}
+			
+			throw err;
+		}
 	});
 });
 

@@ -3,11 +3,12 @@
 const zlib = require('zlib');
 
 const
-	_            = require('lodash'),
-	request      = require('request'),
-	stream       = require('stream'),
-	querystring  = require('querystring'),
-	JSONStream   = require('JSONStream');
+	_                = require('lodash'),
+	request          = require('request'),
+	stream           = require('stream'),
+	querystring      = require('querystring'),
+	JSONStream       = require('JSONStream'),
+	stream2asynciter = require('stream2asynciter');
 
 
 /**
@@ -376,7 +377,7 @@ class QueryCursor {
 				toJSON.resume();
 			};
 			
-			return rs;
+			return stream2asynciter(rs);
 		}
 	}
 }
@@ -519,7 +520,7 @@ class ClickHouse {
 	_getReqParams(query, data) {
 		let me = this;
 		
-		let reqParams = {},
+		let reqParams = _.merge({}, me.opts.reqParams),
 			configQS = _.merge({}, me.opts.config);
 		
 		if (me.opts.database) {

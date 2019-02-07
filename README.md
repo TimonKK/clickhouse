@@ -13,13 +13,11 @@ Example:
 ```javascript
 const { ClickHouse } = require('clickhouse');
 
-// all options
 const clickhouse = new ClickHouse();
 ```
-or
+or with all options:
 
 ```javascript
-// all options
 const clickhouse = new ClickHouse({
 	url: 'http://localhost',
 	port: 8123,
@@ -32,12 +30,19 @@ const clickhouse = new ClickHouse({
 		session_timeout                         : 60,
 		output_format_json_quote_64bit_integers : 0,
 		enable_http_compression                 : 0
+	},
+	
+	// This object merge with request params (see request lib docs)
+	reqParams: {
+		...
 	}
 });
 ```
 
+***
+ 
+Exec query:
 ```javascript
-// exec query
 const queries = [
 	'DROP TABLE IF EXISTS session_temp',
 
@@ -61,14 +66,20 @@ for(const query of queries) {
 
 	console.log(query, r);
 }
+````
 
+***
 
-// exec by callback way
+Exec by callback way:
+```javascript
 clickhouse.query(query).exec(function (err, rows) {
 	...
 });
 
-// stream
+***
+
+Stream:
+```javascript
 clickhouse.query(`SELECT number FROM system.numbers LIMIT 10`).stream()
 	.on('data', function() {
 		const stream = this;
@@ -85,9 +96,20 @@ clickhouse.query(`SELECT number FROM system.numbers LIMIT 10`).stream()
 	.on('end', () => {
 		...
 	});
+```
 
+or **async** stream:
+```javascript
+// async iteration
+for await (const row of clickhouse.query(sql).stream()) {
+	console.log(row);
+}
+```
 
-// as promise
+***
+
+As promise:
+```javascript
 const rows = await clickhouse.query(query).toPromise();
 
 // use query with external data
@@ -99,18 +121,23 @@ const rows = await clickhouse.query('SELECT * AS count FROM temp_table', {
 		},
 	]
 }).toPromise();
+```
 
+***
 
-// set session
+Set session:
+```javascript
 clickhouse.sessionId = '...';
 const r = await clickhouse.query(
 	`CREATE TEMPORARY TABLE test_table
 	(_id String, str String)
 	ENGINE=Memory`
 ).toPromise();
+````
 
 
-// insert stream
+Insert stream:
+```javascript
 const ws = clickhouse.insert('INSERT INTO session_temp').stream();
 for(let i = 0; i <= 1000; i++) {
 	await ws.writeRow(
@@ -124,9 +151,12 @@ for(let i = 0; i <= 1000; i++) {
 
 //wait stream finish
 const result = await ws.exec();
+```
 
+***
 
-// pipe readable stream to writable stream (across transform)
+Pipe readable stream to writable stream (across transform):
+```javascript
 const rs = clickhouse.query(query).stream();
 
 const tf = new stream.Transform({
@@ -141,3 +171,15 @@ const ws = clickhouse.insert('INSERT INTO session_temp2').stream();
 
 const result = await rs.pipe(tf).pipe(ws).exec();
 ```
+
+***
+
+**Changelogs**:
+* 2019-02-07
+	- Add TLS/SSL Protocol support
+	- Add async iteration over SELECT
+	
+	
+	
+**Links**
+* request lib doc https://github.com/request/request#requestoptions-callback
