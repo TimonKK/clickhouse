@@ -529,6 +529,11 @@ class ClickHouse {
 		
 		if (typeof query === 'string') {
 			let sql = query.trim();
+
+			// Hack for Sequelize ORM
+			if (sql.charAt(sql.length - 1) === ';') {
+				sql = sql.substr(0, sql.length - 1);
+			}
 			
 			if (sql.match(/^(select|show)/i)) {
 				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(configQS);

@@ -432,3 +432,20 @@ describe('set database', () => {
 		expect(r2).to.be.ok();
 	});
 });
+
+
+describe('compatibility with Sequelize ORM', () => {
+	it('select with ;', async () => {
+		const sqls = [
+			'SELECT 1 + 1',
+			'SELECT 1 + 1;',
+			'SELECT 1 + 1 ;',
+			'SELECT 1 + 1 ; '
+		];
+
+		for(const sql of sqls) {
+			const r = await clickhouse.query(sql).toPromise();
+			expect(r).to.be.ok();
+		}
+	});
+});
