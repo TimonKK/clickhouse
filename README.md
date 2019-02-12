@@ -22,8 +22,6 @@ const clickhouse = new ClickHouse({
 	url: 'http://localhost',
 	port: 8123,
 	debug: false,
-	user: 'default',
-	password: '',
 	basicAuth: null,
 	isUseGzip: false,
 	config: {
@@ -38,6 +36,17 @@ const clickhouse = new ClickHouse({
 	}
 });
 ```
+
+or change 
+
+	basicAuth: null
+to
+
+	basicAuth: {
+	username: 'default',
+	password: '',
+	},
+
 
 ***
  
