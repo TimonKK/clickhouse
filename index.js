@@ -8,7 +8,8 @@ const
 	stream           = require('stream'),
 	querystring      = require('querystring'),
 	JSONStream       = require('JSONStream'),
-	stream2asynciter = require('stream2asynciter');
+	stream2asynciter = require('stream2asynciter'),
+	{ URL }          = require('url');
 
 
 /**
@@ -44,6 +45,13 @@ var ESCAPE_NULL = {
 };
 
 const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
+
+const URI = 'localhost';
+
+const PORT = 8123;
+
+const DATABASE = 'default';
+const USERNAME = 'default';
 
 function encodeValue(quote, v, format, isArray) {
 	format = ALIASES[format] || format;
@@ -385,13 +393,14 @@ class QueryCursor {
 
 class ClickHouse {
 	constructor(opts) {
+		if ( ! opts) {
+			opts = {};
+		}
+		
 		this.opts = _.extend(
 			{
-				url: 'http://localhost',
-				port: 8123,
 				debug: false,
-				database: 'default',
-				user: 'default',
+				database: DATABASE,
 				password: '',
 				basicAuth: null,
 				isUseGzip: false,
@@ -404,6 +413,26 @@ class ClickHouse {
 			},
 			opts
 		);
+		
+		
+		let url  = opts.url || opts.host || URI,
+			port = opts.port || PORT;
+		
+		if ( ! url.match(/^https?/)) {
+			url = 'http://' + url;
+		}
+		
+		const u = new URL(url);
+		
+		if (u.protocol === 'https:' && (port === 443 || port === 8123)) {
+			u.port = '';
+		} else if (port) {
+			u.port = port;
+		}
+		
+		this.opts.url = u.toString();
+
+		this.opts.username = this.opts.user || this.opts.username || USERNAME;
 	}
 	
 	get sessionId() {
@@ -431,12 +460,16 @@ class ClickHouse {
 	}
 	
 	get url() {
-		let basicAuth = this.opts.basicAuth;
-		if (basicAuth) {
-			return `http://${basicAuth.username}:${basicAuth.password}@${this.opts.url}:${this.opts.port}`;
-		} else {
-			return `${this.opts.url}:${this.opts.port}`;
+		if (this.opts.basicAuth) {
+			const u = new URL(this.opts.url);
+
+			u.username = this.opts.basicAuth.username || '';
+			u.password = this.opts.basicAuth.password || '';
+
+			return u.toString();
 		}
+
+		return this.opts.url;
 	}
 	
 	set url(url) {
@@ -529,7 +562,7 @@ class ClickHouse {
 		
 		if (typeof query === 'string') {
 			let sql = query.trim();
-
+			
 			// Hack for Sequelize ORM
 			if (sql.charAt(sql.length - 1) === ';') {
 				sql = sql.substr(0, sql.length - 1);
@@ -537,6 +570,14 @@ class ClickHouse {
 			
 			if (sql.match(/^(select|show)/i)) {
 				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(configQS);
+				
+				if (me.opts.username) {
+					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
+				}
+
+				if (this.opts.password) {
+					reqParams['url'] = reqParams['url'] + '&password=' + me.opts.password;
+				}
 				
 				if (data && data.external) {
 					let formData = {};

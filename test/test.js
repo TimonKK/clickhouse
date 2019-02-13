@@ -449,3 +449,92 @@ describe('compatibility with Sequelize ORM', () => {
 		}
 	});
 });
+
+
+
+describe('Constructor options', () => {
+	it('url and host', async () => {
+		const clickhouses = [
+			new ClickHouse({
+				url: 'localhost'
+			}),
+			
+			new ClickHouse({
+				url: 'http://localhost'
+			}),
+			
+			new ClickHouse({
+				url: 'http://localhost:8123',
+				port: 8123
+			}),
+			
+			new ClickHouse({
+				host: 'localhost'
+			}),
+			
+			new ClickHouse({
+				host: 'http://localhost'
+			}),
+			
+			new ClickHouse({
+				host: 'http://localhost:8124',
+				port: 8123
+			})
+		];
+		
+		for(const clickhouse of clickhouses) {
+			const r = await clickhouse.query('SELECT 1 + 1').toPromise();
+			expect(r).to.be.ok();
+		}
+	});
+	
+	
+	it('user && password ok', async () => {
+		const clickhouses = [
+			new ClickHouse({
+				user: 'default',
+				password: ''
+			}),
+			
+			new ClickHouse({
+				username: 'default',
+				password: ''
+			}),
+
+			new ClickHouse({
+				basicAuth: {
+					username: 'default',
+					password: ''
+				}
+			}),
+		];
+		
+		for(const clickhouse of clickhouses) {
+			const r = await clickhouse.query('SELECT 1 + 1').toPromise();
+			expect(r).to.be.ok();
+		}
+	});
+	
+	
+	it('user && password fail', async () => {
+		const clickhouses = [
+			new ClickHouse({
+				user: 'default1',
+				password: ''
+			}),
+			
+			new ClickHouse({
+				username: 'default1',
+				password: ''
+			}),
+		];
+		
+		for(const clickhouse of clickhouses) {
+			try {
+				await clickhouse.query('SELECT 1 + 1').toPromise();
+			} catch (err) {
+				expect(err).to.be.ok();
+			}
+		}
+	});
+});

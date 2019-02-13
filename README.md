@@ -184,6 +184,8 @@ const result = await rs.pipe(tf).pipe(ws).exec();
 ***
 
 **Changelogs**:
+* 2019-02-13
+	- Add compatibility with user and username options 
 * 2019-02-07
 	- Add TLS/SSL Protocol support
 	- Add async iteration over SELECT
