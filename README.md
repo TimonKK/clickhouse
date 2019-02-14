@@ -84,6 +84,7 @@ Exec by callback way:
 clickhouse.query(query).exec(function (err, rows) {
 	...
 });
+````
 
 ***
 

@@ -599,11 +599,27 @@ class ClickHouse {
 			} else if (query.match(/^insert/i)) {
 				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT TabSeparated') + '&' + querystring.stringify(configQS);
 				
+				if (me.opts.username) {
+					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
+				}
+				
+				if (this.opts.password) {
+					reqParams['url'] = reqParams['url'] + '&password=' + me.opts.password;
+				}
+				
 				if (data) {
 					reqParams['body'] = me._getBodyForInsert(query, data);
 				}
 			} else {
 				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query) + '&' + querystring.stringify(configQS);
+				
+				if (me.opts.username) {
+					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
+				}
+				
+				if (this.opts.password) {
+					reqParams['url'] = reqParams['url'] + '&password=' + me.opts.password;
+				}
 			}
 			
 			reqParams['headers'] = {
