@@ -30,7 +30,7 @@
       "email": "dim901@yandex.ru"
     }
   ],
-  "name": "clickhouse",
+  "name": "clickhouse2",
   "version": "1.2.15",
   "repository": {
     "type": "git",
@@ -38,5 +38,6 @@
   },
   "keywords": [
     "clickhouse"
-  ]
+  ],
+  "types": "index.d.ts"
 }
