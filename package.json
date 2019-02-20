@@ -38,5 +38,6 @@
   },
   "keywords": [
     "clickhouse"
-  ]
+  ],
+  "types": "index.d.ts"
 }
