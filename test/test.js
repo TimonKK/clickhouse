@@ -139,7 +139,6 @@ describe('Select', () => {
 				expect(row).to.have.key('number');
 				expect(row).to.have.key('str');
 				expect(row).to.have.key('date');
-				console.log('i', i)
 			}
 			
 			expect(i).to.be(rowCount);
@@ -535,6 +534,22 @@ describe('Constructor options', () => {
 			} catch (err) {
 				expect(err).to.be.ok();
 			}
+		}
+	});
+});
+
+
+describe('Exec system queries', () => {
+	it('select with ;', async () => {
+		const sqls = [
+			'EXISTS test_db.myTable'
+		];
+
+		for(const sql of sqls) {
+			const [ row ] = await clickhouse.query(sql).toPromise();
+			expect(row).to.be.ok();
+			expect(row).to.have.key('result');
+			expect(row.result).to.be(0);
 		}
 	});
 });

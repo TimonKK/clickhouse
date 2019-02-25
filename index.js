@@ -44,7 +44,7 @@ var ESCAPE_NULL = {
 	// JSONEachRow: "\\N",
 };
 
-const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception: (.+?), e\.what');
+const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception:');
 
 const URI = 'localhost';
 
@@ -568,7 +568,7 @@ class ClickHouse {
 				sql = sql.substr(0, sql.length - 1);
 			}
 			
-			if (sql.match(/^(select|show)/i)) {
+			if (sql.match(/^(select|show|exists)/i)) {
 				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(configQS);
 				
 				if (me.opts.username) {

@@ -31,7 +31,7 @@
     }
   ],
   "name": "clickhouse",
-  "version": "1.2.16",
+  "version": "1.2.17",
   "repository": {
     "type": "git",
     "url": "https://github.com/TimonKK/clickhouse.git"
