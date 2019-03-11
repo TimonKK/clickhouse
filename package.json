@@ -1,10 +1,55 @@
 {
+  "_from": "clickhouse@^1.2.15",
+  "_id": "clickhouse@1.2.17",
+  "_inBundle": false,
+  "_integrity": "sha512-uBB8BnlOJm09620hhvsrSJv9RmrgQ/AHJsQE1fwr7nD0Aof2kPjCw6r+ag3YE/f0Pgurk5cYzoPxyR2Io6VHwA==",
+  "_location": "/clickhouse",
+  "_phantomChildren": {
+    "aws-sign2": "0.7.0",
+    "aws4": "1.8.0",
+    "caseless": "0.12.0",
+    "combined-stream": "1.0.7",
+    "extend": "3.0.2",
+    "forever-agent": "0.6.1",
+    "form-data": "2.3.3",
+    "har-validator": "5.1.3",
+    "http-signature": "1.2.0",
+    "is-typedarray": "1.0.0",
+    "isstream": "0.1.2",
+    "json-stringify-safe": "5.0.1",
+    "jsonparse": "1.3.1",
+    "mime-types": "2.1.22",
+    "oauth-sign": "0.9.0",
+    "performance-now": "2.1.0",
+    "safe-buffer": "5.1.2",
+    "through": "2.3.8",
+    "tough-cookie": "2.4.3",
+    "tunnel-agent": "0.6.0"
+  },
+  "_requested": {
+    "type": "range",
+    "registry": true,
+    "raw": "clickhouse@^1.2.15",
+    "name": "clickhouse",
+    "escapedName": "clickhouse",
+    "rawSpec": "^1.2.15",
+    "saveSpec": null,
+    "fetchSpec": "^1.2.15"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/clickhouse/-/clickhouse-1.2.17.tgz",
+  "_shasum": "4922b86acdf32f0233d94704d8cfb57b9578f68d",
+  "_spec": "clickhouse@^1.2.15",
+  "_where": "/home/www/ukit_dev",
   "author": {
     "name": "Dmitry Berezhnov"
   },
-  "scripts": {
-    "test": "mocha --timeout 60000 --slow 5000"
+  "bugs": {
+    "url": "https://github.com/TimonKK/clickhouse/issues"
   },
+  "bundleDependencies": false,
   "dependencies": {
     "JSONStream": "1.3.4",
     "lodash": "4.17.11",
@@ -12,6 +57,7 @@
     "request": "2.88.0",
     "stream2asynciter": "1.0.0"
   },
+  "deprecated": false,
   "description": "Client for ClickHouse",
   "devDependencies": {
     "expect.js": "0.3.1",
@@ -22,6 +68,10 @@
     "shasum": "cf85ab5364055c479b1ee71f12ba206a3ecb80b2",
     "tarball": "https://registry.npmjs.org/clickhouse/-/clickhouse-1.0.0.tgz"
   },
+  "homepage": "https://github.com/TimonKK/clickhouse#readme",
+  "keywords": [
+    "clickhouse"
+  ],
   "license": "ISC",
   "main": "index.js",
   "maintainers": [
@@ -31,13 +81,13 @@
     }
   ],
   "name": "clickhouse",
-  "version": "1.2.17",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TimonKK/clickhouse.git"
+    "url": "git+https://github.com/TimonKK/clickhouse.git"
   },
-  "keywords": [
-    "clickhouse"
-  ],
-  "types": "index.d.ts"
+  "scripts": {
+    "test": "mocha --timeout 60000 --slow 5000"
+  },
+  "types": "index.d.ts",
+  "version": "1.2.18"
 }

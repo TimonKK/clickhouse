@@ -128,6 +128,103 @@ function isObject(obj) {
 }
 
 
+class Rs extends stream.Transform {
+	constructor(reqParams) {
+		super();
+		
+		let me = this;
+		
+		me.ws = request.post(reqParams);
+		
+		me.isPiped = false;
+		
+		// Без этого обработчика и вызова read Transform не отрабатывает до конца
+		// https://nodejs.org/api/stream.html#stream_implementing_a_transform_stream
+		// Writing data while the stream is not draining is particularly problematic for a Transform,
+		// because the Transform streams are paused by default until they are piped or
+		// an 'data' or 'readable' event handler is added.
+		me.on('readable', function () {
+			let data = me.read();
+		});
+		
+		me.pipe(me.ws);
+		
+		me.on('pipe', function () {
+			me.isPiped = true;
+		});
+	}
+	
+	_transform(chunk, encoding, cb) {
+		cb(null, chunk);
+	}
+	
+	writeRow(data) {
+		let row = '';
+		
+		if (Array.isArray(data)) {
+			row = ClickHouse.mapRowAsArray(data);
+		} else if (isObject(data)) {
+			throw new Error('Sorry, but it is not work!');
+		}
+		
+		let isOk = this.write(
+			row + '\n'
+		);
+		
+		this.rowCount++;
+		
+		if (isOk) {
+			return Promise.resolve();
+		} else {
+			return new Promise((resolve, reject) => {
+				this.ws.once('drain', err => {
+					if (err) return reject(err);
+					
+					resolve();
+				})
+			});
+		}
+	}
+	
+	
+	exec() {
+		let me = this;
+		
+		return new Promise((resolve, reject) => {
+			let error = null;
+			
+			me.ws
+				.on('error', function(err) {
+					error = err;
+				})
+				.on('response', function (res) {
+					if (error) return reject(error);
+					
+					if (res.statusCode === 200) {
+						return resolve({ r: 1 });
+					} else {
+						if (isDebug) {
+							console.log('insert exec', error, _.pick(res, [
+								'statusCode',
+								'body',
+								'statusMessage'
+							]));
+						}
+						
+						return reject(
+							getErrorObj(res)
+						)
+					}
+				});
+			
+			if ( ! me.isPiped) {
+				me.end();
+			}
+		});
+	}
+}
+
+
 class QueryCursor {
 	constructor(query, reqParams, opts) {
 		this.isInsert  = !!query.match(/^insert/i);
@@ -136,6 +233,7 @@ class QueryCursor {
 		this.reqParams = _.merge({}, reqParams);
 		this.opts      = opts;
 		this.useTotals = false;
+		this._request  = null;
 	}
 	
 	
@@ -146,7 +244,7 @@ class QueryCursor {
 			console.log('exec req headers', me.reqParams.headers);
 		}
 		
-		request.post(me.reqParams, (err, res) => {
+		me._request = request.post(me.reqParams, (err, res) => {
 			if (me.opts.debug) {
 				console.log('exec', err, _.pick(res, [
 					'statusCode',
@@ -209,113 +307,20 @@ class QueryCursor {
 		}
 		
 		if (me.isInsert) {
-			class Rs extends stream.Transform {
-				constructor(reqParams) {
-					super();
-					
-					let me = this;
-					
-					me.ws = request.post(reqParams);
-					
-					me.isPiped = false;
-					
-					// Без этого обработчика и вызова read Transform не отрабатывает до конца
-					// https://nodejs.org/api/stream.html#stream_implementing_a_transform_stream
-					// Writing data while the stream is not draining is particularly problematic for a Transform,
-					// because the Transform streams are paused by default until they are piped or
-					// an 'data' or 'readable' event handler is added.
-					me.on('readable', function () {
-						let data = me.read();
-					});
-					
-					me.pipe(me.ws);
-					
-					me.on('pipe', function () {
-						me.isPiped = true;
-					});
-				}
-				
-				_transform(chunk, encoding, cb) {
-					cb(null, chunk);
-				}
-				
-				writeRow(data) {
-					let row = '';
-					
-					if (Array.isArray(data)) {
-						row = ClickHouse.mapRowAsArray(data);
-					} else if (isObject(data)) {
-						throw new Error('Sorry, but it is not work!');
-					}
-					
-					let isOk = this.write(
-						row + '\n'
-					);
-					
-					this.rowCount++;
-					
-					if (isOk) {
-						return Promise.resolve();
-					} else {
-						return new Promise((resolve, reject) => {
-							this.ws.once('drain', err => {
-								if (err) return reject(err);
-								
-								resolve();
-							})
-						});
-					}
-				}
-				
-				
-				exec() {
-					let me = this;
-					
-					return new Promise((resolve, reject) => {
-						let error = null;
-						
-						me.ws
-							.on('error', function(err) {
-								error = err;
-							})
-							.on('response', function (res) {
-								if (error) return reject(error);
-								
-								if (res.statusCode === 200) {
-									return resolve({ r: 1 });
-								} else {
-									if (isDebug) {
-										console.log('insert exec', error, _.pick(res, [
-											'statusCode',
-											'body',
-											'statusMessage'
-										]));
-									}
-									
-									return reject(
-										getErrorObj(res)
-									)
-								}
-							});
-						
-						if ( ! me.isPiped) {
-							me.end();
-						}
-					});
-				}
-			}
-			
-			let rs = new Rs(this.reqParams);
+			const rs = new Rs(this.reqParams);
 			rs.query = this.query;
+			
+			me._request = rs;
+			
 			return rs;
 		} else {
-			let toJSON = JSONStream.parse(['data', true]);
+			const toJSON = JSONStream.parse(['data', true]);
 			
-			let rs = new stream.Readable({ 	objectMode: true });
+			const rs = new stream.Readable({ 	objectMode: true });
 			rs._read = () => {};
 			rs.query = this.query;
 			
-			let tf = new stream.Transform({ objectMode: true });
+			const tf = new stream.Transform({ objectMode: true });
 			let isFirstChunck = true;
 			tf._transform = function (chunk, encoding, cb) {
 				
@@ -338,7 +343,7 @@ class QueryCursor {
 			
 			let metaData = {};
 			
-			let requestStream = request.post(this.reqParams);
+			const requestStream = request.post(this.reqParams);
 			
 			// Не делаем .pipe(rs) потому что rs - Readable,
 			// а для pipe нужен Writable
@@ -385,8 +390,23 @@ class QueryCursor {
 				toJSON.resume();
 			};
 			
+			me._request = rs;
+			
 			return stream2asynciter(rs);
 		}
+	}
+	
+	
+	destroy() {
+		if (this._request instanceof stream.Readable) {
+			return this._request.destroy();
+		}
+		
+		if (this._request) {
+			return this._request.abort();
+		}
+		
+		throw new Error('QueryCursor.destroy error: private field _request is invalid');
 	}
 }
 

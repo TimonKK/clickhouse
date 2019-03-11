@@ -11,7 +11,8 @@ const
 		database : database,
 		debug    : false
 	}),
-	rowCount   = _.random(50 * 1024, 128 * 1024),
+	minRnd     = 50 * 1024,
+	rowCount   = _.random(minRnd, 128 * 1024),
 	sql        = `SELECT
 				number,
 				toString(number * 2) AS str,
@@ -552,4 +553,40 @@ describe('Exec system queries', () => {
 			expect(row.result).to.be(0);
 		}
 	});
+});
+
+
+describe('Abort query', () => {
+	it('exec & abort', cb => {
+		const $q = clickhouse.query(`SELECT number FROM system.numbers LIMIT ${rowCount}`);
+		
+		let i     = 0,
+			error = null;
+		
+		const stream = $q.stream()
+			.on('data', () => {
+				++i;
+				
+				if (i > minRnd) {
+					stream.pause();
+				}
+			})
+			.on('error', err => error = err)
+			.on('close', () => {
+				expect(error).to.not.be.ok();
+				expect(i).to.be.below(rowCount);
+				
+				cb();
+			})
+			.on('end', () => {
+				cb(new Error('no way!'));
+			});
+		
+		setTimeout(() => $q.destroy(), 10 * 1000);
+	});
+});
+
+
+after(async () => {
+	await clickhouse.query(`DROP DATABASE IF EXISTS ${database}`).toPromise();
 });
