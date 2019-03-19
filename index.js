@@ -204,19 +204,11 @@ class Rs extends stream.Transform {
 					
 					if (res.statusCode === 200) {
 						return resolve({ r: 1 });
-					} else {
-						if (me.opts.debug) {
-							console.log('insert exec', error, _.pick(res, [
-								'statusCode',
-								'body',
-								'statusMessage'
-							]));
-						}
-						
-						return reject(
-							getErrorObj(res)
-						)
 					}
+					
+					return reject(
+						getErrorObj(res)
+					)
 				});
 			
 			if ( ! me.isPiped) {
