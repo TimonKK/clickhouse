@@ -89,5 +89,5 @@
     "test": "mocha --timeout 60000 --slow 5000"
   },
   "types": "index.d.ts",
-  "version": "1.2.18"
+  "version": "1.2.19"
 }

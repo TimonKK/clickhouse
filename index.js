@@ -198,12 +198,14 @@ class Rs extends stream.Transform {
 					error = err;
 				})
 				.on('response', function (res) {
-					if (error) return reject(error);
+					if (error) {
+						return reject(error);
+					}
 					
 					if (res.statusCode === 200) {
 						return resolve({ r: 1 });
 					} else {
-						if (isDebug) {
+						if (me.opts.debug) {
 							console.log('insert exec', error, _.pick(res, [
 								'statusCode',
 								'body',
