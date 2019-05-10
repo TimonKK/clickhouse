@@ -191,17 +191,11 @@ class Rs extends stream.Transform {
 		let me = this;
 		
 		return new Promise((resolve, reject) => {
-			let error = null;
-			
 			me.ws
 				.on('error', function(err) {
-					error = err;
+					reject(err);
 				})
 				.on('response', function (res) {
-					if (error) {
-						return reject(error);
-					}
-					
 					if (res.statusCode === 200) {
 						return resolve({ r: 1 });
 					}
