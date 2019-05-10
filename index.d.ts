@@ -12,13 +12,13 @@ declare module 'clickhouse' {
     sessionId: string;
   }
 
-  export class WriteStream extends stream.Transform {
+  export class WriteStream extends Stream.Transform {
     writeRow(data: Array<any>);
     exec();
   }
 
   class QueryCursor {
-    async toPromise(): Promise<Object[]>;
+    toPromise(): Promise<Object[]>;
     exec(callback: callbackExec);
     stream(): Stream | WriteStream;
   }
