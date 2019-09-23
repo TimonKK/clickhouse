@@ -78,8 +78,54 @@ describe('Select', () => {
 			callback();
 		});
 	});
-	
-	
+
+	it('use callback #3 with csv format', callback => {
+		clickhouse.query(`${sql} format CSVWithNames`).exec((err, rows) => {
+			expect(err).to.not.be.ok();
+
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: 0, date: '1970-01-02' });
+
+			callback();
+		});
+	});
+
+
+	it('use callback #4 with csv format', callback => {
+		clickhouse.query(`${sql} format CSVWithNames`, (err, rows) => {
+			expect(err).to.not.be.ok();
+
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: 0, date: '1970-01-02' });
+
+			callback();
+		});
+	});
+
+	it('use callback #5 with tsv format', callback => {
+		clickhouse.query(`${sql} format TabSeparatedWithNames`).exec((err, rows) => {
+			expect(err).to.not.be.ok();
+
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+
+			callback();
+		});
+	});
+
+
+	it('use callback #6 with tsv format', callback => {
+		clickhouse.query(`${sql} format TabSeparatedWithNames`, (err, rows) => {
+			expect(err).to.not.be.ok();
+
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+
+			callback();
+		});
+	});
+
+
 	it('use stream', function(callback) {
 		this.timeout(10000);
 		
@@ -88,6 +134,7 @@ describe('Select', () => {
 		
 		clickhouse.query(sql).stream()
 			.on('data', () => ++i)
+			// TODO: on this case you should catch error
 			.on('error', err => error = err)
 			.on('end', () => {
 				expect(error).to.not.be.ok();
@@ -479,6 +526,24 @@ describe('Constructor options', () => {
 			new ClickHouse({
 				host: 'http://localhost:8124',
 				port: 8123
+			}),
+
+			new ClickHouse({
+				host: 'http://localhost:8124',
+				port: 8123,
+				format: "json"
+			}),
+
+			new ClickHouse({
+				host: 'http://localhost:8124',
+				port: 8123,
+				format: "tsv"
+			}),
+
+			new ClickHouse({
+				host: 'http://localhost:8124',
+				port: 8123,
+				format: "csv"
 			})
 		];
 		

@@ -9,7 +9,9 @@ const
 	querystring      = require('querystring'),
 	JSONStream       = require('JSONStream'),
 	stream2asynciter = require('stream2asynciter'),
-	{ URL }          = require('url');
+	{ URL }          = require('url'),
+	csv              = require('csv'),
+	tsv              = require('tsv');
 
 
 /**
@@ -52,6 +54,22 @@ const PORT = 8123;
 
 const DATABASE = 'default';
 const USERNAME = 'default';
+
+function parseCSV(body) {
+	const data = new tsv.Parser(SEPARATORS.CSV, { header: true }).parse(body);
+	data.splice(data.length - 1, 1);
+	return data;
+}
+
+function parseJSON(body) {
+	return JSON.parse(body);
+}
+
+function parseTSV(body) {
+	const data = new tsv.Parser(SEPARATORS.TSV, { header: true }).parse(body)
+	data.splice(data.length - 1, 1);
+	return data;
+}
 
 function encodeValue(quote, v, format, isArray) {
 	format = ALIASES[format] || format;
@@ -256,17 +274,34 @@ class QueryCursor {
 			if (me.opts.debug) {
 				console.log('exec res headers', res.headers);
 			}
-			
+
 			try {
-				let json = JSON.parse(res.body);
-				
-				cb(null, me.useTotals ? json : json.data);
-			} catch (err2) {
-				cb(err2);
+				const result = this._parseRowsByFormat(res.body);
+				cb(null, me.useTotals ? result : result.data || result)
+			} catch (e) {
+				cb(e);
 			}
 		});
 	}
-	
+
+	_parseRowsByFormat(body) {
+		let rows = null;
+        switch (this.opts.sessionFormat || this.opts.format) {
+			case "json":
+				rows = parseJSON(body);
+				break;
+			case "tsv":
+				rows = parseTSV(body);
+				break;
+			case "csv":
+				rows = parseCSV(body);
+				break;
+			default:
+				rows = body;
+		}
+		return rows;
+	};
+
 	withTotals() {
 		this.useTotals  = true;
 		return this;
@@ -417,7 +452,8 @@ class ClickHouse {
 					session_timeout                         : 60,
 					output_format_json_quote_64bit_integers : 0,
 					enable_http_compression                 : 0
-				}
+				},
+                format: "json", // "json" || "csv" || "tsv"
 			},
 			opts
 		);
@@ -515,8 +551,40 @@ class ClickHouse {
 			return encodeValue(false, value, 'TabSeparated');
 		}).join('\t');
 	}
-	
-	
+
+	_getFormat(query) {
+		let format = "";
+		switch (this.opts.format) {
+		case "json":
+			format = this._parseFormat(query, " format JSON");
+			break;
+		case "tsv":
+            format = this._parseFormat(query, " format TabSeparatedWithNames");
+			break;
+		case "csv":
+			format = this._parseFormat(query, " format CSVWithNames");
+			break;
+		default:
+			format = " ";
+		}
+		return format;
+	};
+
+    _parseFormat(query, def) {
+        if (query.match(/format/mg) === null) {
+            this.opts.sessionFormat = this.opts.format;
+            return def;
+        }
+        if (query.match(/format JSON/mg) !== null) {
+            this.opts.sessionFormat = "json";
+        } else if (query.match(/format TabSeparated/mg) !== null) {
+            this.opts.sessionFormat = "tsv";
+        } else if (query.match(/format CSV/mg) !== null) {
+            this.opts.sessionFormat = "csv";
+        }
+        return "";
+    }
+
 	_mapRowAsObject(fieldList, row) {
 		return fieldList.map(f => encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated')).join('\t');
 	}
@@ -572,13 +640,10 @@ class ClickHouse {
 			let sql = query.trim();
 			
 			// Hack for Sequelize ORM
-			if (sql.charAt(sql.length - 1) === ';') {
-				sql = sql.substr(0, sql.length - 1);
-			}
-			
+			sql = sql.trimEnd().replace(/;$/gm, "");
+
 			if (sql.match(/^(select|show|exists)/i)) {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT JSON') + '&' + querystring.stringify(configQS);
-				
+            	reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + this._getFormat(sql) + ';') + '&' + querystring.stringify(configQS);
 				if (me.opts.username) {
 					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
 				}
@@ -605,7 +670,7 @@ class ClickHouse {
 					reqParams['formData'] = formData;
 				}
 			} else if (query.match(/^insert/i)) {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query + ' FORMAT TabSeparated') + '&' + querystring.stringify(configQS);
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ' FORMAT TabSeparated') + '&' + querystring.stringify(configQS);
 				
 				if (me.opts.username) {
 					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
@@ -616,10 +681,10 @@ class ClickHouse {
 				}
 				
 				if (data) {
-					reqParams['body'] = me._getBodyForInsert(query, data);
+					reqParams['body'] = me._getBodyForInsert(sql, data);
 				}
 			} else {
-				reqParams['url']  = me.url + '?query=' + encodeURIComponent(query) + '&' + querystring.stringify(configQS);
+				reqParams['url']  = me.url + '?query=' + encodeURIComponent(sql + ";") + '&' + querystring.stringify(configQS);
 				
 				if (me.opts.username) {
 					reqParams['url'] = reqParams['url'] + '&user=' + me.opts.username;
@@ -664,6 +729,6 @@ class ClickHouse {
 }
 
 module.exports = {
-	ClickHouse
+    ClickHouse
 };
 
