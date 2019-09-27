@@ -13,13 +13,13 @@ declare module 'clickhouse' {
   }
 
   export class WriteStream extends Stream.Transform {
-    writeRow(data: Array<any>);
-    exec();
+    writeRow(data: Array<any>): void;
+    exec(): Promise<{}>;
   }
 
   class QueryCursor {
     toPromise(): Promise<Object[]>;
-    exec(callback: callbackExec);
+    exec(callback: callbackExec): void;
     stream(): Stream | WriteStream;
   }
 }
