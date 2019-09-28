@@ -8,9 +8,9 @@ const
 	stream           = require('stream'),
 	querystring      = require('querystring'),
 	JSONStream       = require('JSONStream'),
+	through       	 = require('through'),
 	stream2asynciter = require('stream2asynciter'),
 	{ URL }          = require('url'),
-	csv              = require('csv'),
 	tsv              = require('tsv');
 
 
@@ -55,8 +55,8 @@ const PORT = 8123;
 const DATABASE = 'default';
 const USERNAME = 'default';
 
-function parseCSV(body) {
-	const data = new tsv.Parser(SEPARATORS.CSV, { header: true }).parse(body);
+function parseCSV(body, options = { header: true }) {
+	const data = new tsv.Parser(SEPARATORS.CSV, options).parse(body);
 	data.splice(data.length - 1, 1);
 	return data;
 }
@@ -65,10 +65,74 @@ function parseJSON(body) {
 	return JSON.parse(body);
 }
 
-function parseTSV(body) {
-	const data = new tsv.Parser(SEPARATORS.TSV, { header: true }).parse(body)
+function parseTSV(body, options = { header: true }) {
+	const data = new tsv.Parser(SEPARATORS.TSV, options).parse(body);
 	data.splice(data.length - 1, 1);
 	return data;
+}
+
+function parseCSVStream(s) {
+	let isFirst = true;
+	let ref = {
+		fields: []
+	};
+	return through(function (chunk) {
+		let str = chunk.toString();
+		let parsed = parseCSV(str, {header: isFirst});
+		let strarr = str.split("\n");
+		let plen = (isFirst && strarr.length - 1 || strarr.length) - parsed.length;
+		
+		if (!isFirst) {
+			chunk = Buffer.concat([Buffer.from([...s].join("\n")), chunk]).toString();
+			parsed = parseCSV(str, {header: isFirst});
+			s = new Set();
+		}
+		strarr.splice(strarr.length - plen).forEach((value => s.add(value)));
+		chunkBuilder.call(this, isFirst, ref, str, parsed);
+		isFirst = false;
+	})
+}
+
+function parseJSONStream() {
+	return JSONStream.parse(['data', true]);
+}
+
+function parseTSVStream(s) {
+    let isFirst = true;
+    let ref = {
+		fields: []
+	};
+	return through(function (chunk) {
+		let str = chunk.toString();
+		let parsed = parseTSV(str, {header: isFirst});
+		let strarr = str.split("\n");
+		let plen = (isFirst && strarr.length - 1 || strarr.length) - parsed.length;
+		
+		if (!isFirst) {
+			chunk = Buffer.concat([Buffer.from([...s].join("\n")), chunk]).toString();
+			parsed = parseTSV(str, {header: isFirst});
+			s = new Set();
+		}
+		strarr.splice(strarr.length - plen).forEach((value => s.add(value)));
+		chunkBuilder.call(this, isFirst, ref, str, parsed);
+		isFirst = false;
+	});
+}
+
+function chunkBuilder(isFirst, ref, chunk, parsed) {
+	if (isFirst) {
+		ref.fields = Object.keys(parsed[0]);
+		parsed.forEach((value) => {
+			this.queue(value);
+		});
+	} else {
+		parsed.forEach((value) => {
+			let result = {};
+			ref.fields.forEach((field, index) => (result[field] = value[index]));
+			this.queue(result);
+			result = null;
+		});
+	}
 }
 
 function encodeValue(quote, v, format, isArray) {
@@ -284,23 +348,28 @@ class QueryCursor {
 		});
 	}
 
-	_parseRowsByFormat(body) {
-		let rows = null;
-        switch (this.opts.sessionFormat || this.opts.format) {
+	_parseRowsByFormat(body, isStream = false) {
+		let result = null;
+		let ws;
+        switch (this._getFormat()) {
 			case "json":
-				rows = parseJSON(body);
+				result = !isStream && parseJSON(body) || parseJSONStream();
 				break;
 			case "tsv":
-				rows = parseTSV(body);
+				result = !isStream && parseTSV(body) || parseTSVStream(new Set());
 				break;
 			case "csv":
-				rows = parseCSV(body);
+				result = !isStream && parseCSV(body) || parseCSVStream(new Set());
 				break;
 			default:
-				rows = body;
+				result = body;
 		}
-		return rows;
+		return result;
 	};
+
+    _getFormat() {
+        return this.opts.sessionFormat || this.opts.format;
+    }
 
 	withTotals() {
 		this.useTotals  = true;
@@ -337,7 +406,7 @@ class QueryCursor {
 			
 			return rs;
 		} else {
-			const toJSON = JSONStream.parse(['data', true]);
+			const streamParser = this._parseRowsByFormat(null, true);
 			
 			const rs = new stream.Readable({ 	objectMode: true });
 			rs._read = () => {};
@@ -346,14 +415,17 @@ class QueryCursor {
 			const tf = new stream.Transform({ objectMode: true });
 			let isFirstChunck = true;
 			tf._transform = function (chunk, encoding, cb) {
-				
 				// Если для первого chuck первый символ блока данных не '{', тогда:
 				// 1. в теле ответа не JSON
 				// 2. сервер нашел ошибку в данных запроса
-				if (isFirstChunck && chunk[0] !== 123) {
+				if (isFirstChunck &&  (
+                    (me._getFormat() === "json" && chunk[0] !== 123) &&
+                    (me._getFormat() === "csv" && chunk[0] !== 110) &&
+                    (me._getFormat() === "tsv" && chunk[0] !== 110)
+                )) {
 					this.error = new Error(chunk.toString());
 					
-					toJSON.emit("error", this.error);
+					streamParser.emit("error", this.error);
 					rs.emit('close');
 					
 					return cb();
@@ -373,9 +445,9 @@ class QueryCursor {
 			let s = null;
 			if (me.opts.isUseGzip) {
 				const z = zlib.createGunzip();
-				s = requestStream.pipe(z).pipe(tf).pipe(toJSON)
+				s = requestStream.pipe(z).pipe(tf).pipe(streamParser)
 			} else {
-				s = requestStream.pipe(tf).pipe(toJSON)
+				s = requestStream.pipe(tf).pipe(streamParser)
 			}
 			
 			
@@ -403,14 +475,14 @@ class QueryCursor {
 			rs.pause  = () => {
 				rs.__pause();
 				requestStream.pause();
-				toJSON.pause();
+				streamParser.pause();
 			};
 			
 			rs.__resume = rs.resume;
 			rs.resume = () => {
 				rs.__resume();
 				requestStream.resume();
-				toJSON.resume();
+				streamParser.resume();
 			};
 			
 			me._request = rs;
