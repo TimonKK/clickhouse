@@ -24,6 +24,7 @@ const clickhouse = new ClickHouse({
 	debug: false,
 	basicAuth: null,
 	isUseGzip: false,
+    format: "json", // "json" || "csv" || "tsv"
 	config: {
 		session_timeout                         : 60,
 		output_format_json_quote_64bit_integers : 0,

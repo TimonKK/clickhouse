@@ -135,6 +135,46 @@ describe('Select', () => {
 		clickhouse.query(sql).stream()
 			.on('data', () => ++i)
 			// TODO: on this case you should catch error
+			.on('error', err => callback(err))
+			.on('end', () => {
+				expect(error).to.not.be.ok();
+				expect(i).to.be(rowCount);
+				
+				callback();
+			});
+	});
+	
+	it('use stream with csv format', function(callback) {
+		// this.timeout(10000);
+		
+		let i = 0;
+		let error = null;
+		
+		clickhouse.query(`${sql} format CSVWithNames`).stream()
+			.on('data', () => {
+				++i
+			})
+			// TODO: on this case you should catch error
+			.on('error', err => callback(err))
+			.on('end', () => {
+				expect(error).to.not.be.ok();
+				expect(i).to.be(rowCount);
+				
+				callback();
+			});
+	});
+	
+	it('use stream with tsv format', function(callback) {
+		// this.timeout(10000);
+		
+		let i = 0;
+		let error = null;
+		
+		clickhouse.query(`${sql} format TabSeparatedWithNames`).stream()
+			.on('data', () => {
+				++i
+			})
+			// TODO: on this case you should catch error
 			.on('error', err => error = err)
 			.on('end', () => {
 				expect(error).to.not.be.ok();
@@ -183,6 +223,32 @@ describe('Select', () => {
 			let i = 0;
 			
 			for await (const row of clickhouse.query(sql).stream()) {
+				++i;
+				expect(row).to.have.key('number');
+				expect(row).to.have.key('str');
+				expect(row).to.have.key('date');
+			}
+			
+			expect(i).to.be(rowCount);
+		});
+		
+		it('use async for with csv format', async function() {
+			let i = 0;
+			
+			for await (const row of clickhouse.query(`${sql} format CSVWithNames`).stream()) {
+				++i;
+				expect(row).to.have.key('number');
+				expect(row).to.have.key('str');
+				expect(row).to.have.key('date');
+			}
+			
+			expect(i).to.be(rowCount);
+		});
+		
+		it('use async for with tsv format', async function() {
+			let i = 0;
+			
+			for await (const row of clickhouse.query(`${sql} format TabSeparatedWithNames`).stream()) {
 				++i;
 				expect(row).to.have.key('number');
 				expect(row).to.have.key('str');
@@ -445,17 +511,17 @@ describe('response codes', () => {
 			expect(err.code).to.be(60);
 		}
 		
-		// try {
-		// 	let result = await clickhouse.query('DROP TABLE session_temp2').toPromise();
-		// 	expect(result).to.be.ok();
+		try {
+			let result = await clickhouse.query('DROP TABLE session_temp2').toPromise();
+			expect(result).to.be.ok();
 		
-		// 	await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp2').toPromise();
-		// 	expect().fail('You should not be here2');
-		// } catch (err) {
-		// 	expect(err).to.be.ok();
-		// 	expect(err).to.have.key('code');
-		// 	expect(err.code).to.be(60);
-		// }
+			await clickhouse.query('SELECT COUNT(*) AS count FROM session_temp2').toPromise();
+			expect().fail('You should not be here2');
+		} catch (err) {
+			expect(err).to.be.ok();
+			expect(err).to.have.key('code');
+			expect(err.code).to.be(60);
+		}
 	});
 });
 
