@@ -9,7 +9,7 @@ const database = 'test_' + _.random(1000, 100000);
 const
 	clickhouse = new ClickHouse({
 		database : database,
-		debug    : false
+		debug    : false,
 	}),
 	minRnd     = 50 * 1024,
 	rowCount   = _.random(minRnd, 128 * 1024),
@@ -674,7 +674,7 @@ describe('Constructor options', () => {
 describe('Exec system queries', () => {
 	it('select with ;', async () => {
 		const sqls = [
-			'EXISTS test_db.myTable'
+			'EXISTS TABLE test_db.myTable'
 		];
 
 		for(const sql of sqls) {
