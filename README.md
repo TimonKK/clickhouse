@@ -28,7 +28,8 @@ const clickhouse = new ClickHouse({
 	config: {
 		session_timeout                         : 60,
 		output_format_json_quote_64bit_integers : 0,
-		enable_http_compression                 : 0
+		enable_http_compression                 : 0,
+        database                                : 'my_database_name',
 	},
 	
 	// This object merge with request params (see request lib docs)
