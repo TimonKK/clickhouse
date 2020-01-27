@@ -23,6 +23,7 @@ const clickhouse = new ClickHouse({
 	port: 8123,
 	debug: false,
 	basicAuth: null,
+	post: false,
 	isUseGzip: false,
     format: "json", // "json" || "csv" || "tsv"
 	config: {
