@@ -18,8 +18,9 @@ declare module 'clickhouse' {
   }
 
   class QueryCursor {
-    toPromise(): Promise<Object[]>;
+    toPromise(): Promise<any>;
     exec(callback: callbackExec): void;
     stream(): Stream | WriteStream;
+    withTotals(): QueryCursor;
   }
 }
