@@ -1,8 +1,12 @@
-const
-	stream         = require('stream'),
-	expect         = require('expect.js'),
-	_              = require('lodash'),
-	{ ClickHouse } = require('../.');
+'use strict';
+
+const stream = require('stream');
+const expect = require('expect.js');
+const _  = require('lodash');
+const https = require('https');
+const fs = require('fs');
+
+const { ClickHouse } = require('../.');
 
 const database = 'test_' + _.random(1000, 100000);
 
@@ -44,7 +48,14 @@ describe('Exec', () => {
 			)
 			ENGINE=MergeTree(date, (mark, time), 8192)`,
 			
-			'OPTIMIZE TABLE session_temp PARTITION 201807 FINAL'
+			'OPTIMIZE TABLE session_temp PARTITION 201807 FINAL',
+			
+			`
+				SELECT
+					*
+				FROM session_temp
+				LIMIT 10
+			`,
 		];
 		
 		for(const query of sqlList) {
@@ -56,7 +67,7 @@ describe('Exec', () => {
 });
 
 describe('Select', () => {
-	it('use callback', callback => {
+	it('callback #1', callback => {
 		clickhouse.query(sql).exec((err, rows) => {
 			expect(err).to.not.be.ok();
 			
@@ -67,8 +78,7 @@ describe('Select', () => {
 		});
 	});
 	
-	
-	it('use callback #2', callback => {
+	it('callback #2', callback => {
 		clickhouse.query(sql, (err, rows) => {
 			expect(err).to.not.be.ok();
 			
@@ -78,103 +88,20 @@ describe('Select', () => {
 			callback();
 		});
 	});
-
-	it('use callback #3 with csv format', callback => {
-		clickhouse.query(`${sql} format CSVWithNames`).exec((err, rows) => {
-			expect(err).to.not.be.ok();
-
-			expect(rows).to.have.length(rowCount);
-			expect(rows[0]).to.eql({ number: 0, str: 0, date: '1970-01-02' });
-
-			callback();
-		});
-	});
-
-
-	it('use callback #4 with csv format', callback => {
-		clickhouse.query(`${sql} format CSVWithNames`, (err, rows) => {
-			expect(err).to.not.be.ok();
-
-			expect(rows).to.have.length(rowCount);
-			expect(rows[0]).to.eql({ number: 0, str: 0, date: '1970-01-02' });
-
-			callback();
-		});
-	});
-
-	it('use callback #5 with tsv format', callback => {
-		clickhouse.query(`${sql} format TabSeparatedWithNames`).exec((err, rows) => {
-			expect(err).to.not.be.ok();
-
-			expect(rows).to.have.length(rowCount);
-			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
-
-			callback();
-		});
-	});
-
-
-	it('use callback #6 with tsv format', callback => {
-		clickhouse.query(`${sql} format TabSeparatedWithNames`, (err, rows) => {
-			expect(err).to.not.be.ok();
-
-			expect(rows).to.have.length(rowCount);
-			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
-
-			callback();
-		});
-	});
-
-
-	it('use stream', function(callback) {
-		this.timeout(10000);
+	
+	it('promise and await/async', async () => {
+		const rows = await clickhouse.query(sql).toPromise();
 		
+		expect(rows).to.have.length(rowCount);
+		expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+	});
+	
+	it('stream', function(callback) {
 		let i = 0;
 		let error = null;
 		
 		clickhouse.query(sql).stream()
 			.on('data', () => ++i)
-			// TODO: on this case you should catch error
-			.on('error', err => callback(err))
-			.on('end', () => {
-				expect(error).to.not.be.ok();
-				expect(i).to.be(rowCount);
-				
-				callback();
-			});
-	});
-	
-	it('use stream with csv format', function(callback) {
-		// this.timeout(10000);
-		
-		let i = 0;
-		let error = null;
-		
-		clickhouse.query(`${sql} format CSVWithNames`).stream()
-			.on('data', () => {
-				++i
-			})
-			// TODO: on this case you should catch error
-			.on('error', err => callback(err))
-			.on('end', () => {
-				expect(error).to.not.be.ok();
-				expect(i).to.be(rowCount);
-				
-				callback();
-			});
-	});
-	
-	it('use stream with tsv format', function(callback) {
-		// this.timeout(10000);
-		
-		let i = 0;
-		let error = null;
-		
-		clickhouse.query(`${sql} format TabSeparatedWithNames`).stream()
-			.on('data', () => {
-				++i
-			})
-			// TODO: on this case you should catch error
 			.on('error', err => error = err)
 			.on('end', () => {
 				expect(error).to.not.be.ok();
@@ -184,8 +111,7 @@ describe('Select', () => {
 			});
 	});
 	
-	
-	it('use stream with pause/resume', function(callback) {
+	it('stream with pause/resume', function(callback) {
 		const
 			count = 10,
 			pause = 1000,
@@ -216,10 +142,9 @@ describe('Select', () => {
 			})
 	});
 	
-	
 	const nodeVersion = process.version.split('.')[0].substr(1);
 	if (parseInt(nodeVersion, 10) >= 10) {
-		it('use async for', async function() {
+		it('async for', async function() {
 			let i = 0;
 			
 			for await (const row of clickhouse.query(sql).stream()) {
@@ -231,57 +156,92 @@ describe('Select', () => {
 			
 			expect(i).to.be(rowCount);
 		});
-		
-		it('use async for with csv format', async function() {
-			let i = 0;
-			
-			for await (const row of clickhouse.query(`${sql} format CSVWithNames`).stream()) {
-				++i;
-				expect(row).to.have.key('number');
-				expect(row).to.have.key('str');
-				expect(row).to.have.key('date');
-			}
-			
-			expect(i).to.be(rowCount);
-		});
-		
-		it('use async for with tsv format', async function() {
-			let i = 0;
-			
-			for await (const row of clickhouse.query(`${sql} format TabSeparatedWithNames`).stream()) {
-				++i;
-				expect(row).to.have.key('number');
-				expect(row).to.have.key('str');
-				expect(row).to.have.key('date');
-			}
-			
-			expect(i).to.be(rowCount);
-		});
 	}
 	
 	
-	it('use promise and await/async', async () => {
-		let rows = await clickhouse.query(sql).toPromise();
-		
-		expect(rows).to.have.length(rowCount);
-		expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
-	});
-	
-	
-	it('use select with external', async () => {
-		const result = await clickhouse.query('SELECT count(*) AS count FROM temp_table', {
-			external: [
-				{
-					name: 'temp_table',
-					data: _.range(0, rowCount).map(i => `str${i}`)
-				},
-			]
-		}).toPromise();
+	it('select with external', async () => {
+		const result = await clickhouse.query(
+			'SELECT count(*) AS count FROM temp_table',
+			{
+				external: [
+					{
+						name: 'temp_table',
+						data: _.range(0, rowCount).map(i => `str${i}`)
+					},
+				]
+			}
+		).toPromise();
 		
 		expect(result).to.be.ok();
 		expect(result).to.have.length(1);
 		expect(result[0]).to.have.key('count');
 		expect(result[0].count).to.be(rowCount);
+	});
+	
+	it('catch error', async () => {
+		try {
+			await clickhouse.query(sql + '1').toPromise();
+		} catch (err) {
+			expect(err).to.be.ok();
+		}
+	});
+	
+	[
+		{
+			format: 'fake_name',
+			fullFormatExpr: 'FakeName',
+		},
+		...ClickHouse.getFormats(),
+	].forEach(({ format, fullFormatExpr }) => {
+		
+		// The string "foRmat" is used because different forms of writing are found in real code.
+		const fullSql = sql + (format === 'fake_name' ? '' : ` foRmat ${fullFormatExpr}`);
+		
+		it(`with "${fullFormatExpr}" into sql`, async () => {
+			const rows = await clickhouse.query(fullSql).toPromise();
+			
+			expect(rows).to.have.length(rowCount);
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+		});
+		
+		if (format !== 'fake_name') {
+			it(`with "${fullFormatExpr}" in options`, async () => {
+				const rows = await clickhouse.query(sql, {}, { format }).toPromise();
+				
+				expect(rows).to.have.length(rowCount);
+				expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+			});
+		}
+		
+		it(`with promise "${fullFormatExpr}"`, async () => {
+			try {
+				await clickhouse.query(`SELECT * FROM random_table_name ${fullFormatExpr}`).toPromise();
+			} catch (err) {
+				expect(err).to.be.ok();
+			}
+		});
+		
+		it(`with stream ${fullFormatExpr}"`, cb => {
+			let i     = 0,
+				error = null;
+			
+			const stream = clickhouse.query(`SELECT * FROM random_table_name ${fullFormatExpr}`).stream();
+			
+			stream
+				.on('data', () => ++i)
+				.on('error', err => error = err)
+				.on('close', () => {
+					expect(error).to.be.ok();
+					expect(error.toString()).to.match(new RegExp(`Table ${database}.random_table_name doesn\'t exist`));
+					
+					expect(i).to.eql(0);
+					
+					cb();
+				})
+				.on('end', () => {
+					cb(new Error('no way #2'));
+				});
+		});
 	});
 });
 
@@ -310,21 +270,16 @@ describe('session', () => {
 	});
 });
 
-
 // You can use all settings from request library (https://github.com/request/request#tlsssl-protocol)
 describe('TLS/SSL Protocol', () => {
 	it('use TLS/SSL Protocol', async () => {
-		const
-			https = require('https'),
-			fs    = require('fs');
-		
 		let server = null;
 		
 		try {
 			server = https.createServer(
 				{
 					key  : fs.readFileSync('test/cert/server.key'),
-					cert : fs.readFileSync('test/cert/server.crt')
+					cert : fs.readFileSync('test/cert/server.crt'),
 				},
 				(req, res) => {
 					res.writeHead(200);
@@ -341,12 +296,11 @@ describe('TLS/SSL Protocol', () => {
 						cert: fs.readFileSync('test/cert/server.crt'),
 						key: fs.readFileSync('test/cert/server.key'),
 					}
-				}
+				},
+				debug    : false,
 			});
 			
-			
-			const r = await temp.query('SELECT 1 + 1').toPromise();
-			
+			const r = await temp.query('SELECT 1 + 1 Format JSON').toPromise();
 			expect(r).to.be.ok();
 			expect(r[0]).to.have.key('plus(1, 1)');
 			expect(r[0]['plus(1, 1)']).to.be(2);
@@ -363,7 +317,6 @@ describe('TLS/SSL Protocol', () => {
 		}
 	});
 });
-
 
 describe('queries', () => {
 	it('insert field as array', async () => {
@@ -398,16 +351,14 @@ describe('queries', () => {
 			}
 		];
 		
-		
-		const r2 = await clickhouse.insert('INSERT INTO test_array (date, str, arr, arr2, arr3)', rows).toPromise();
+		const r2 = await clickhouse.insert(
+			'INSERT INTO test_array (date, str, arr, arr2, arr3)',
+			rows
+		).toPromise();
 		expect(r2).to.be.ok();
-		
-		
-		clickhouse.sessionId = null;
 	});
 	
-	
-	it('queries', async () => {
+	it('select, insert and two pipes', async () => {
 		const result = await clickhouse.query('DROP TABLE IF EXISTS session_temp').toPromise();
 		expect(result).to.be.ok();
 		
@@ -473,29 +424,23 @@ describe('queries', () => {
 		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
+	});
+	
+	it('select number as number', async () => {
+		const result = await clickhouse.query('DROP TABLE IF EXISTS test_int_temp').toPromise();
+		expect(result).to.be.ok();
 		
-		const result11 = await clickhouse.query('SELECT date FROM test_array GROUP BY date WITH TOTALS').withTotals().toPromise();
-		expect(result11).to.have.key('meta');
-		expect(result11).to.have.key('data');
-		expect(result11).to.have.key('totals');
-		expect(result11).to.have.key('rows');
-		expect(result11).to.have.key('statistics');
-		
-		const result111 = await clickhouse.query('DROP TABLE IF EXISTS test_int_temp').toPromise();
-		expect(result111).to.be.ok();
-		
-		const result12 = await clickhouse.query('CREATE TABLE test_int_temp (int_value Int8 ) ENGINE=Memory').toPromise();
-		expect(result12).to.be.ok();
+		const result1 = await clickhouse.query('CREATE TABLE test_int_temp (int_value Int8 ) ENGINE=Memory').toPromise();
+		expect(result1).to.be.ok();
 		
 		const int_value_data = [{int_value: 0}];
-		const result13 = await clickhouse.insert('INSERT INTO test_int_temp (int_value)', int_value_data).toPromise();
-		expect(result13).to.be.ok();
+		const result3 = await clickhouse.insert('INSERT INTO test_int_temp (int_value)', int_value_data).toPromise();
+		expect(result3).to.be.ok();
 		
-		const result14 = await clickhouse.query('SELECT int_value FROM test_int_temp').toPromise();
-		expect(result14).to.eql(int_value_data);
+		const result4 = await clickhouse.query('SELECT int_value FROM test_int_temp').toPromise();
+		expect(result4).to.eql(int_value_data);
 	});
 });
-
 
 describe('response codes', () => {
 	it('table is not exists', async () => {
@@ -534,7 +479,7 @@ describe('set database', () => {
 		expect(r).to.be.ok();
 		
 		const temp = new ClickHouse({
-			database: noDefaultDb
+			database: noDefaultDb,
 		});
 		
 		
@@ -717,6 +662,35 @@ describe('Abort query', () => {
 	});
 });
 
+describe('Select and WITH TOTALS statement', () => {
+	[false, true].forEach(withTotals => {
+		it(`is ${withTotals}`, async () => {
+			const query = clickhouse.query(
+				`SELECT
+						number % 3 AS i,
+						groupArray(number) as kList
+					FROM (
+						SELECT number FROM system.numbers LIMIT 14
+					)
+					GROUP BY i ${withTotals ? '' : 'WITH TOTALS'}
+					FORMAT TabSeparatedWithNames
+				`
+			);
+			
+			if (withTotals) {
+				query.withTotals();
+			}
+			
+			const result = await query.toPromise();
+			
+			expect(result).to.have.key('meta');
+			expect(result).to.have.key('data');
+			expect(result).to.have.key('totals');
+			expect(result).to.have.key('rows');
+			expect(result).to.have.key('statistics');
+		});
+	});
+});
 
 after(async () => {
 	await clickhouse.query(`DROP DATABASE IF EXISTS ${database}`).toPromise();

@@ -56,8 +56,9 @@
     "querystring": "0.2.0",
     "request": "2.88.0",
     "stream2asynciter": "1.0.0",
-    "through": "^2.3.8",
-    "tsv": "^0.2.0"
+    "through": "2.3.8",
+    "tsv": "0.2.0",
+    "uuid": "3.4.0"
   },
   "deprecated": false,
   "description": "Client for ClickHouse",
@@ -91,5 +92,5 @@
     "test": "mocha --bail --timeout 60000 --slow 5000"
   },
   "types": "index.d.ts",
-  "version": "1.2.24"
+  "version": "2.0.0"
 }
