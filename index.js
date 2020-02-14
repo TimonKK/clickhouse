@@ -349,7 +349,10 @@ class QueryCursor {
 		this.useTotals = false;
 		this._request = null;
 		this.queryId = opts.queryId || uuidv4();
-		console.log('QueryCursor', {query: this.query, data: this.data, opts: this.opts})
+		
+		if (this.isDebug) {
+			console.log('QueryCursor', {query: this.query, data: this.data, opts: this.opts});
+		}
 	}
 	
 	get isInsert() {
