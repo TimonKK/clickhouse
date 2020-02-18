@@ -850,7 +850,7 @@ class ClickHouse {
 	static mapRowAsArray(row) {
 		return row
 			.map(value => encodeValue(false, value, 'TabSeparated'))
-			.join('\t');
+			.join('\t') + `\N`;
 	}
 	
 	static mapRowAsObject(fieldList, row) {
@@ -858,7 +858,7 @@ class ClickHouse {
 			.map(f => {
 				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
 			})
-			.join('\t');
+			.join('\t') + `\N`;
 	}
 	
 	static getFullFormatName(format = '') {
