@@ -165,6 +165,7 @@ function chunkBuilder(isFirst, ref, chunk, parsed) {
 function encodeValue(quote, v, _format, isArray) {
 	const format = ALIASES[_format] || _format;
 	
+	if(!v) return "\\N"
 	switch (typeof v) {
 		case 'string':
 			if (isArray) {
@@ -850,7 +851,7 @@ class ClickHouse {
 	static mapRowAsArray(row) {
 		return row
 			.map(value => encodeValue(false, value, 'TabSeparated'))
-			.join('\t') + `\N`;
+			.join('\t');// + `\N`;
 	}
 	
 	static mapRowAsObject(fieldList, row) {
@@ -858,7 +859,7 @@ class ClickHouse {
 			.map(f => {
 				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
 			})
-			.join('\t') + `\N`;
+			.join('\t');// + `\N`;
 	}
 	
 	static getFullFormatName(format = '') {
