@@ -542,27 +542,27 @@ class QueryCursor {
 			}
 
 			try {
-				let data = me.getBodyParser()(res.body);
+				const data = me.getBodyParser()(res.body);
 				
 				if (me.format === 'json') {
-					data = data.data;
+					if (me.useTotals) {
+						return cb(null, data);
+					}
+					
+					return cb(null, data.data);
 				}
 				
 				if (me.useTotals) {
-					const totals = JSON.parse(res.headers['x-clickhouse-summary']);
-					return cb(
-						null,
-						{
-							meta: {},
-							data: data,
-							totals,
-							rows: data.length,
-							statistics: {},
-						}
-					);
+					return cb(null, {
+						meta: {},
+						data,
+						totals: {},
+						rows: {},
+						statistics: {},
+					});
 				}
 				
-				cb(null, data);
+				return cb(null, data);
 			} catch (err) {
 				cb(err);
 			}
@@ -603,6 +603,7 @@ class QueryCursor {
 
 	withTotals() {
 		this.useTotals  = true;
+		
 		return this;
 	}
 	

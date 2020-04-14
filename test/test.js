@@ -665,17 +665,16 @@ describe('Exec system queries', () => {
 describe('Select and WITH TOTALS statement', () => {
 	[false, true].forEach(withTotals => {
 		it(`is ${withTotals}`, async () => {
-			const query = clickhouse.query(
-				`SELECT
-						number % 3 AS i,
-						groupArray(number) as kList
-					FROM (
-						SELECT number FROM system.numbers LIMIT 14
-					)
-					GROUP BY i ${withTotals ? '' : 'WITH TOTALS'}
-					FORMAT TabSeparatedWithNames
-				`
-			);
+			const query = clickhouse.query(`
+				SELECT
+					number % 3 AS i,
+					groupArray(number) as kList
+				FROM (
+					SELECT number FROM system.numbers LIMIT 14
+				)
+				GROUP BY i ${withTotals ? '' : 'WITH TOTALS'}
+				FORMAT TabSeparatedWithNames
+			`);
 			
 			if (withTotals) {
 				query.withTotals();
@@ -692,6 +691,8 @@ describe('Select and WITH TOTALS statement', () => {
 	});
 	
 	it('WITH TOTALS #2', async () => {
+		const LIMIT_COUNT = 10;
+		
 		const result = await clickhouse.query(`
 			SELECT
 				rowNumberInAllBlocks() AS i,
@@ -703,13 +704,15 @@ describe('Select and WITH TOTALS statement', () => {
 					system.numbers
 				LIMIT 1000
 			)
-			GROUP BY i WITH TOTALS LIMIT 10
+			GROUP BY i WITH TOTALS
+			LIMIT ${LIMIT_COUNT}
 		`).toPromise();
 		
 		expect(result).to.have.key('meta');
 		expect(result).to.have.key('data');
 		expect(result).to.have.key('totals');
 		expect(result).to.have.key('rows');
+		expect(result.rows).to.be(LIMIT_COUNT);
 		expect(result).to.have.key('statistics');
 	})
 });
@@ -738,7 +741,7 @@ describe('Abort query', () => {
 				setTimeout(() => cb(), 4 * 1000);
 			})
 			.on('end', () => {
-				cb(new Error('no way!'));
+				cb(new Error('no way! May be stream very quick!'));
 			});
 		
 		setTimeout(() => $q.destroy(), 10 * 1000);

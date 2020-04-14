@@ -188,6 +188,8 @@ const result = await rs.pipe(tf).pipe(ws).exec();
 ***
 
 **Changelogs**:
+* 2020-04-17 (v2.1.0)
+    - Fix query with totals. For json formats work perfect, but for another - doesn't
 * 2019-02-13
 	- Add compatibility with user and username options 
 * 2019-02-07
