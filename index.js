@@ -282,7 +282,7 @@ class Rs extends Transform {
 		if (Array.isArray(data)) {
 			row = ClickHouse.mapRowAsArray(data);
 		} else if (isObject(data)) {
-			throw new Error('Sorry, but it is not work!');
+			throw new Error('Error: Inserted data must be an array, not an object.');
 		}
 		
 		let isOk = this.write(
