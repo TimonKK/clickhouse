@@ -158,7 +158,6 @@ describe('Select', () => {
 		});
 	}
 	
-	
 	it('select with external', async () => {
 		const result = await clickhouse.query(
 			'SELECT count(*) AS count FROM temp_table',
@@ -176,6 +175,36 @@ describe('Select', () => {
 		expect(result).to.have.length(1);
 		expect(result[0]).to.have.key('count');
 		expect(result[0].count).to.be(rowCount);
+	});
+	
+	it('select with external && join', async () => {
+		const result = await clickhouse.query(
+			`
+				SELECT
+					*
+				FROM system.numbers AS i
+				LEFT JOIN (
+					SELECT
+						number
+					FROM system.numbers
+					WHERE number IN temp_table
+					LIMIT 10
+				) AS n ON(n.number = i.number)
+				LIMIT 100
+			`,
+			{
+				external: [
+					{
+						name: 'temp_table',
+						data: _.range(0, 10),
+						structure: 'i UInt64'
+					},
+				]
+			}
+		).toPromise();
+		
+		expect(result).to.be.ok();
+		expect(result).to.have.length(100);
 	});
 	
 	it('catch error', async () => {
@@ -271,6 +300,8 @@ describe('session', () => {
 });
 
 // You can use all settings from request library (https://github.com/request/request#tlsssl-protocol)
+// Generate ssl file with:
+// sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout test/cert/server.key -out test/cert/server.crt
 describe('TLS/SSL Protocol', () => {
 	it('use TLS/SSL Protocol', async () => {
 		let server = null;
@@ -631,37 +662,6 @@ describe('Exec system queries', () => {
 	});
 });
 
-
-describe('Abort query', () => {
-	it('exec & abort', cb => {
-		const $q = clickhouse.query(`SELECT number FROM system.numbers LIMIT ${rowCount}`);
-		
-		let i     = 0,
-			error = null;
-		
-		const stream = $q.stream()
-			.on('data', () => {
-				++i;
-				
-				if (i > minRnd) {
-					stream.pause();
-				}
-			})
-			.on('error', err => error = err)
-			.on('close', () => {
-				expect(error).to.not.be.ok();
-				expect(i).to.be.below(rowCount);
-				
-				cb();
-			})
-			.on('end', () => {
-				cb(new Error('no way!'));
-			});
-		
-		setTimeout(() => $q.destroy(), 10 * 1000);
-	});
-});
-
 describe('Select and WITH TOTALS statement', () => {
 	[false, true].forEach(withTotals => {
 		it(`is ${withTotals}`, async () => {
@@ -689,6 +689,59 @@ describe('Select and WITH TOTALS statement', () => {
 			expect(result).to.have.key('rows');
 			expect(result).to.have.key('statistics');
 		});
+	});
+	
+	it('WITH TOTALS #2', async () => {
+		const result = await clickhouse.query(`
+			SELECT
+				rowNumberInAllBlocks() AS i,
+				SUM(number)
+			FROM (
+				SELECT
+					number
+				FROM
+					system.numbers
+				LIMIT 1000
+			)
+			GROUP BY i WITH TOTALS LIMIT 10
+		`).toPromise();
+		
+		expect(result).to.have.key('meta');
+		expect(result).to.have.key('data');
+		expect(result).to.have.key('totals');
+		expect(result).to.have.key('rows');
+		expect(result).to.have.key('statistics');
+	})
+});
+
+describe('Abort query', () => {
+	it('exec & abort', cb => {
+		const $q = clickhouse.query(`SELECT number FROM system.numbers LIMIT ${rowCount}`);
+		
+		let i     = 0,
+			error = null;
+		
+		const stream = $q.stream()
+			.on('data', () => {
+				++i;
+				
+				if (i > minRnd) {
+					stream.pause();
+				}
+			})
+			.on('error', err => error = err)
+			.on('close', () => {
+				expect(error).to.not.be.ok();
+				expect(i).to.be.below(rowCount);
+				
+				// Take some time for waiting of cancel query
+				setTimeout(() => cb(), 4 * 1000);
+			})
+			.on('end', () => {
+				cb(new Error('no way!'));
+			});
+		
+		setTimeout(() => $q.destroy(), 10 * 1000);
 	});
 });
 
