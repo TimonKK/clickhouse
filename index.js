@@ -506,11 +506,11 @@ class QueryCursor {
 			params.headers['Accept-Encoding']  = 'gzip';
 		}
 		
+		params['url'] = url.toString();
+		
 		if (me.isDebug) {
 			console.log('QueryCursor._getReqParams: params', me.query, params);
 		}
-		
-		params['url'] = url.toString();
 		
 		return params;
 	}

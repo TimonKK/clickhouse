@@ -714,7 +714,32 @@ describe('Select and WITH TOTALS statement', () => {
 		expect(result).to.have.key('rows');
 		expect(result.rows).to.be(LIMIT_COUNT);
 		expect(result).to.have.key('statistics');
-	})
+	});
+	
+	it('WITH TOTALS #3 (JSON)', async () => {
+		const LIMIT_COUNT = 10;
+		
+		const result = await clickhouse.query(`
+			SELECT
+			  rowNumberInAllBlocks() AS i,
+			  number
+			FROM (
+			  SELECT
+			    number
+			  FROM
+			    system.numbers
+			  LIMIT 1000
+			)
+			LIMIT ${LIMIT_COUNT}
+			FORMAT JSON
+		`).withTotals().toPromise();
+		
+		expect(result).to.have.key('meta');
+		expect(result).to.have.key('data');
+		expect(result).to.have.key('rows');
+		expect(result.rows).to.be(LIMIT_COUNT);
+		expect(result).to.have.key('statistics');
+	});
 });
 
 describe('Abort query', () => {
