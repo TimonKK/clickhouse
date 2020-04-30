@@ -318,9 +318,17 @@ class Rs extends Transform {
 						return resolve({ r: 1 });
 					}
 					
-					return reject(
-						getErrorObj(res)
-					)
+					let body = '';
+					
+					res
+						.on('data', data => body += data)
+						.on('end', () => {
+							res.body = body;
+							
+							return reject(
+								getErrorObj(res)
+							);
+						});
 				});
 			
 			if ( ! me.isPiped) {
@@ -429,9 +437,14 @@ class QueryCursor {
 				'Content-Type': 'text/plain'
 			},
 		}, reqParams);
+		
 		const configQS = _.merge({}, config, {
 			query_id: me.queryId,
 		});
+		
+		if (me.connection.opts.isSessionPerQuery) {
+			configQS.session_id = uuidv4();
+		}
 		
 		if (database) {
 			configQS.database = database;
@@ -491,11 +504,15 @@ class QueryCursor {
 						{}
 					);
 				}
-			} else if (query.match(/^insert/i)) {
-				query += ' FORMAT TabSeparated';
-				
-				if (data) {
-					params['body'] = me._getBodyForInsert();
+			} else if (me.isInsert) {
+				if (query.match(/values/i)) {
+					//
+				} else {
+					query += ' FORMAT TabSeparated';
+					
+					if (data) {
+						params['body'] = me._getBodyForInsert();
+					}
 				}
 			}
 		}
@@ -733,7 +750,7 @@ class QueryCursor {
 			// we need use this hack
 			me.connection.query(
 				`KILL QUERY WHERE query_id = '${me.queryId}' SYNC`, {}, {
-					sessionId: Date.now(),
+					sessionId: uuidv4(),
 				}
 			).exec(() => {});
 		}
@@ -762,6 +779,7 @@ class ClickHouse {
 					enable_http_compression                 : 0
 				},
                 format: 'json',
+				isSessionPerQuery: false,
 			},
 			opts
 		);
@@ -798,6 +816,16 @@ class ClickHouse {
 	
 	noSession() {
 		delete this.opts.config.session_id;
+		
+		return this;
+	}
+	
+	get sessionPerQuery() {
+		return this.opts.isSessionPerQuery;
+	}
+	
+	setSessionPerQuery(value) {
+		this.opts.isSessionPerQuery = !!value;
 		
 		return this;
 	}

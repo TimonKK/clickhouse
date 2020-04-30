@@ -274,7 +274,6 @@ describe('Select', () => {
 	});
 });
 
-
 describe('session', () => {
 	it('use session', async () => {
 		const sessionId = clickhouse.sessionId;
@@ -296,6 +295,53 @@ describe('session', () => {
 		expect(result2).to.be.ok();
 		
 		clickhouse.sessionId = sessionId;
+	});
+
+	it('use setSessionPerQuery #1', async () => {
+		const sessionPerQuery = clickhouse.sessionPerQuery;
+		clickhouse.setSessionPerQuery(false);
+
+		const result = await clickhouse.query(
+			`CREATE TEMPORARY TABLE test_table
+			(_id String, str String)
+			ENGINE=Memory`
+		).toPromise();
+		expect(result).to.be.ok();
+
+		try {
+			await clickhouse.query(
+				`CREATE TEMPORARY TABLE test_table
+				(_id String, str String)
+				ENGINE=Memory`
+			).toPromise();
+
+			expect(1).to.be(0);
+		} catch (err) {
+			expect(err).to.be.ok();
+			expect(err.code).to.be(57);
+		}
+
+		clickhouse.setSessionPerQuery(sessionPerQuery);
+	});
+	
+	it('use setSessionPerQuery #2', async () => {
+		const sessionPerQuery = clickhouse.sessionPerQuery;
+		clickhouse.setSessionPerQuery(true);
+		
+		const result = await clickhouse.query(
+			`CREATE TEMPORARY TABLE test_table
+			(_id String, str String)
+			ENGINE=Memory`
+		).toPromise();
+		expect(result).to.be.ok();
+		
+		await clickhouse.query(
+			`CREATE TEMPORARY TABLE test_table
+				(_id String, str String)
+				ENGINE=Memory`
+		).toPromise();
+		
+		clickhouse.setSessionPerQuery(sessionPerQuery);
 	});
 });
 
@@ -455,6 +501,24 @@ describe('queries', () => {
 		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
+	});
+	
+	it('insert && errors', async () => {
+		try {
+			const stream = clickhouse.insert('INSERT INTO BAD_TABLE').stream();
+			
+			for (let i = 0; i < 10; i++) {
+				stream.writeRow([i, `test: ${i}`]);
+			}
+			
+			await stream.exec();
+			
+			// no way!
+			expect(1).to.be.equal(0);
+		} catch (err) {
+			expect(err).to.be.ok();
+			expect(err.code).to.be(60);
+		}
 	});
 	
 	it('select number as number', async () => {
