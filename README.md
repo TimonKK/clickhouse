@@ -148,6 +148,16 @@ const r = await clickhouse.query(
 ).toPromise();
 ````
 
+In case your application requires specific sessions to manage specific data then you can send `session_id` with each query.
+
+```javascript
+let mySessionId = 'some_randome_string';
+const r = await clickhouse.query(
+	`CREATE TEMPORARY TABLE test_table
+	(_id String, str String)
+	ENGINE=Memory`, {}, {sessionId: mySessionId}
+).toPromise();
+```
 
 Insert stream:
 ```javascript

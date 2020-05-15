@@ -517,6 +517,10 @@ class QueryCursor {
 			}
 		}
 		
+		if (me.opts.sessionId !== undefined && typeof me.opts.sessionId === 'string') {
+			url.searchParams.append('session_id', me.opts.sessionId);
+		}
+		
 		url.searchParams.append('query', query);
 		
 		if (me.connection.isUseGzip) {

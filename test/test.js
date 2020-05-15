@@ -296,6 +296,34 @@ describe('session', () => {
 		
 		clickhouse.sessionId = sessionId;
 	});
+  
+  it('uses session per query', async () => {
+		let tempSessionId = `${Date.now()}`;
+		
+		const result = await clickhouse.query(
+			`CREATE TEMPORARY TABLE test_table
+			(_id String, str String)
+			ENGINE=Memory`, {}, {sessionId: tempSessionId}
+		).toPromise();
+		expect(result).to.be.ok();
+		
+		const result2 = await clickhouse.query(
+			`SELECT * FROM test_table LIMIT 10`, {}, {sessionId: tempSessionId}
+		).toPromise();
+        expect(result2).to.be.ok();
+        try {
+            await clickhouse.query(
+                `SELECT * FROM test_table LIMIT 10`, {}, {sessionId: `${tempSessionId}_bad`}
+            ).toPromise();
+        } catch (error) {
+            expect(error.code).to.be(60);
+        }
+        
+        const result3 = await clickhouse.query(
+			`DROP TEMPORARY TABLE test_table`, {}, {sessionId: tempSessionId}
+		).toPromise();
+		expect(result3).to.be.ok();
+  });
 
 	it('use setSessionPerQuery #1', async () => {
 		const sessionPerQuery = clickhouse.sessionPerQuery;
