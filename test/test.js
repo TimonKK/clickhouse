@@ -11,9 +11,12 @@ const { ClickHouse } = require('../.');
 const database = 'test_' + _.random(1000, 100000);
 
 const
+	config     = {
+		debug: false,
+	},
 	clickhouse = new ClickHouse({
+		...config,
 		database : database,
-		debug    : false,
 	}),
 	minRnd     = 50 * 1024,
 	rowCount   = _.random(minRnd, 128 * 1024),
@@ -25,7 +28,7 @@ const
 			LIMIT ${rowCount}`;
 
 before(async () => {
-	const temp = new ClickHouse();
+	const temp = new ClickHouse(config);
 	
 	await temp.query(`DROP DATABASE IF EXISTS ${database}`).toPromise();
 	await temp.query(`CREATE DATABASE ${database}`).toPromise();
@@ -393,6 +396,7 @@ describe('TLS/SSL Protocol', () => {
 				.listen(8000);
 			
 			const temp = new ClickHouse({
+				...config,
 				url       : 'https://localhost',
 				port      : 8000,
 				reqParams : {
@@ -602,6 +606,7 @@ describe('set database', () => {
 		expect(r).to.be.ok();
 		
 		const temp = new ClickHouse({
+			...config,
 			database: noDefaultDb,
 		});
 		
@@ -637,44 +642,53 @@ describe('Constructor options', () => {
 	it('url and host', async () => {
 		const clickhouses = [
 			new ClickHouse({
+				...config,
 				url: 'localhost'
 			}),
 			
 			new ClickHouse({
+				...config,
 				url: 'http://localhost'
 			}),
 			
 			new ClickHouse({
+				...config,
 				url: 'http://localhost:8123',
 				port: 8123
 			}),
 			
 			new ClickHouse({
+				...config,
 				host: 'localhost'
 			}),
 			
 			new ClickHouse({
+				...config,
 				host: 'http://localhost'
 			}),
 			
 			new ClickHouse({
+				...config,
 				host: 'http://localhost:8124',
 				port: 8123
 			}),
 
 			new ClickHouse({
+				...config,
 				host: 'http://localhost:8124',
 				port: 8123,
 				format: "json"
 			}),
 
 			new ClickHouse({
+				...config,
 				host: 'http://localhost:8124',
 				port: 8123,
 				format: "tsv"
 			}),
 
 			new ClickHouse({
+				...config,
 				host: 'http://localhost:8124',
 				port: 8123,
 				format: "csv"
@@ -691,16 +705,19 @@ describe('Constructor options', () => {
 	it('user && password ok', async () => {
 		const clickhouses = [
 			new ClickHouse({
+				...config,
 				user: 'default',
 				password: ''
 			}),
 			
 			new ClickHouse({
+				...config,
 				username: 'default',
 				password: ''
 			}),
 
 			new ClickHouse({
+				...config,
 				basicAuth: {
 					username: 'default',
 					password: ''
@@ -718,11 +735,13 @@ describe('Constructor options', () => {
 	it('user && password fail', async () => {
 		const clickhouses = [
 			new ClickHouse({
+				...config,
 				user: 'default1',
 				password: ''
 			}),
 			
 			new ClickHouse({
+				...config,
 				username: 'default1',
 				password: ''
 			}),
