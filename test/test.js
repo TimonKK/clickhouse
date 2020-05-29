@@ -755,6 +755,34 @@ describe('Constructor options', () => {
 			}
 		}
 	});
+	
+	
+	it('database', async () => {
+		const clickhouses = [
+			new ClickHouse({
+				...config,
+				...{
+					config: {
+						database: 'system',
+					}
+				},
+			}),
+			
+			new ClickHouse({
+				...config,
+				database: 'system',
+			}),
+		];
+		
+		for(const clickhouse of clickhouses) {
+			const [{ count }] = await clickhouse.query(
+				'SELECT count(*) AS count FROM (SELECT number FROM numbers LIMIT 1024)'
+			).toPromise();
+			
+			expect(count).to.be(1024);
+		}
+	});
+	
 });
 
 

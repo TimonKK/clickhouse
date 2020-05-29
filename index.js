@@ -770,7 +770,7 @@ class QueryCursor {
 
 class ClickHouse {
 	constructor(opts = {}) {
-		this.opts = _.extend(
+		this.opts = _.merge(
 			{
 				debug: false,
 				database: DATABASE,
@@ -807,6 +807,15 @@ class ClickHouse {
 		this.opts.url = u.toString();
 
 		this.opts.username = this.opts.user || this.opts.username || USERNAME;
+		
+		
+		if (this.opts.config) {
+			const { database } = this.opts.config;
+			
+			if (database && database !== this.opts.database) {
+				this.opts.database = database;
+			}
+		}
 	}
 	
 	get sessionId() {
