@@ -800,7 +800,7 @@ class ClickHouse {
 		
 		if (u.protocol === 'https:' && (port === 443 || port === 8123)) {
 			u.port = '';
-		} else if (port) {
+		} else if (! u.port && port) {
 			u.port = port;
 		}
 		
