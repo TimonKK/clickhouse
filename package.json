@@ -52,7 +52,7 @@
   "bundleDependencies": false,
   "dependencies": {
     "JSONStream": "1.3.4",
-    "lodash": "4.17.15",
+    "lodash": "4.17.19",
     "querystring": "0.2.0",
     "request": "2.88.0",
     "stream2asynciter": "1.0.0",
