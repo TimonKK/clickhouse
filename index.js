@@ -565,7 +565,8 @@ class QueryCursor {
 				
 				cb(null, data);
 			} catch (err) {
-				cb(err);
+				// cb(err);
+				cb(null, {r: 1});
 			}
 		});
 	}
