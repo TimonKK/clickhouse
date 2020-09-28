@@ -499,7 +499,7 @@ class QueryCursor {
 					params['body'] = me._getBodyForInsert();
 				}
 
-				query = query.split("(")[0] + ' FORMAT TabSeparated';
+				// query = query.split("(")[0] + ' FORMAT TabSeparated';
 			}
 		}
 		
