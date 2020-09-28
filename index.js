@@ -498,6 +498,8 @@ class QueryCursor {
 				if (data) {
 					params['body'] = me._getBodyForInsert();
 				}
+
+				query = query.split("(")[0] + ' FORMAT TabSeparated';
 			}
 		}
 		
