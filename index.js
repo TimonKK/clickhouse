@@ -470,6 +470,7 @@ class QueryCursor {
 				}
 				
 				query += ';';
+				url.searchParams.append('query', query);
 				
 				if (data && data.external) {
 					params['formData'] = data.external.reduce(
@@ -493,17 +494,15 @@ class QueryCursor {
 					);
 				}
 			} else if (query.match(/^insert/i)) {
-				query += ' FORMAT TabSeparated';
+				query += ' FORMAT TabSeparated ';
 				
 				if (data) {
-					params['body'] = me._getBodyForInsert();
+					params['body'] = query + me._getBodyForInsert();
 				}
-
-				// query = query.split("(")[0] + ' FORMAT TabSeparated';
 			}
 		}
 		
-		url.searchParams.append('query', query);
+		// url.searchParams.append('query', query);
 		
 		if (me.connection.isUseGzip) {
 			params.headers['Accept-Encoding']  = 'gzip';
@@ -567,8 +566,8 @@ class QueryCursor {
 				
 				cb(null, data);
 			} catch (err) {
-				// cb(err);
-				cb(null, {r: 1});
+				//cb(err);
+				return cb(null, {r: 1});
 			}
 		});
 	}
