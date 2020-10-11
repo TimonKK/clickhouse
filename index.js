@@ -499,6 +499,8 @@ class QueryCursor {
 				if (data) {
 					params['body'] = query + me._getBodyForInsert();
 				}
+			} else {
+				url.searchParams.append('query', query);
 			}
 		}
 		
