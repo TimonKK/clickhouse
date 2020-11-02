@@ -667,20 +667,20 @@ describe('Constructor options', () => {
 		},
 
 		{
-			host: 'http://localhost:8124',
-			port: 8123,
+			host: 'http://localhost:8123',
+			port: 8124,
 			format: "json",
 		},
 
 		{
-			host: 'http://localhost:8124',
-			port: 8123,
+			host: 'http://localhost:8123',
+			port: 8124,
 			format: "tsv",
 		},
 
 		{
-			host: 'http://localhost:8124',
-			port: 8123,
+			host: 'http://localhost:8123',
+			port: 8124,
 			format: "csv",
 		},
 	];
