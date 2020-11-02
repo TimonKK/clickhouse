@@ -382,7 +382,7 @@ describe('session', () => {
 describe('TLS/SSL Protocol', () => {
 	it('use TLS/SSL Protocol', async () => {
 		let server = null;
-		
+
 		try {
 			server = https.createServer(
 				{
@@ -394,10 +394,10 @@ describe('TLS/SSL Protocol', () => {
 					res.end('{\n\t"meta":\n\t[\n\t\t{\n\t\t\t"name": "plus(1, 1)",\n\t\t\t"type": "UInt16"\n\t\t}\n\t],\n\n\t"data":\n\t[\n\t\t{\n\t\t\t"plus(1, 1)": 2\n\t\t}\n\t],\n\n\t"rows": 1,\n\n\t"statistics":\n\t{\n\t\t"elapsed": 0.000037755,\n\t\t"rows_read": 1,\n\t\t"bytes_read": 1\n\t}\n}\n');
 				})
 				.listen(8000);
-			
+
 			const temp = new ClickHouse({
 				...config,
-				url       : 'https://localhost',
+				url       : 'https://localhost:8000',
 				port      : 8000,
 				reqParams : {
 					agentOptions: {
@@ -408,12 +408,12 @@ describe('TLS/SSL Protocol', () => {
 				},
 				debug    : false,
 			});
-			
+
 			const r = await temp.query('SELECT 1 + 1 Format JSON').toPromise();
 			expect(r).to.be.ok();
 			expect(r[0]).to.have.key('plus(1, 1)');
 			expect(r[0]['plus(1, 1)']).to.be(2);
-			
+
 			if (server) {
 				server.close();
 			}
@@ -421,7 +421,7 @@ describe('TLS/SSL Protocol', () => {
 			if (server) {
 				server.close();
 			}
-			
+
 			throw err;
 		}
 	});
@@ -639,67 +639,63 @@ describe('compatibility with Sequelize ORM', () => {
 
 
 describe('Constructor options', () => {
-	it('url and host', async () => {
-		const clickhouses = [
-			new ClickHouse({
-				...config,
-				url: 'localhost'
-			}),
-			
-			new ClickHouse({
-				...config,
-				url: 'http://localhost'
-			}),
-			
-			new ClickHouse({
-				...config,
-				url: 'http://localhost:8123',
-				port: 8123
-			}),
-			
-			new ClickHouse({
-				...config,
-				host: 'localhost'
-			}),
-			
-			new ClickHouse({
-				...config,
-				host: 'http://localhost'
-			}),
-			
-			new ClickHouse({
-				...config,
-				host: 'http://localhost:8124',
-				port: 8123
-			}),
+	const addConfigs = [
+		{
+			url: 'localhost',
+		},
 
-			new ClickHouse({
-				...config,
-				host: 'http://localhost:8124',
-				port: 8123,
-				format: "json"
-			}),
+		{
+			url: 'http://localhost',
+		},
 
-			new ClickHouse({
-				...config,
-				host: 'http://localhost:8124',
-				port: 8123,
-				format: "tsv"
-			}),
+		{
+			url: 'http://localhost:8123',
+			port: 8123,
+		},
 
-			new ClickHouse({
+		{
+			host: 'localhost',
+		},
+
+		{
+			host: 'http://localhost',
+		},
+
+		{
+			host: 'http://localhost:8123',
+			port: 8124,
+		},
+
+		{
+			host: 'http://localhost:8124',
+			port: 8123,
+			format: "json",
+		},
+
+		{
+			host: 'http://localhost:8124',
+			port: 8123,
+			format: "tsv",
+		},
+
+		{
+			host: 'http://localhost:8124',
+			port: 8123,
+			format: "csv",
+		},
+	];
+
+	for(const addConfig of addConfigs) {
+		it(`url and host (${JSON.stringify(addConfig)})`, async () => {
+			const clickhouse = new ClickHouse({
 				...config,
-				host: 'http://localhost:8124',
-				port: 8123,
-				format: "csv"
-			})
-		];
-		
-		for(const clickhouse of clickhouses) {
+				...addConfig,
+			});
+
 			const r = await clickhouse.query('SELECT 1 + 1').toPromise();
 			expect(r).to.be.ok();
-		}
-	});
+		});
+	}
 	
 	
 	it('user && password ok', async () => {

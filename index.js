@@ -797,13 +797,13 @@ class ClickHouse {
 		}
 		
 		const u = new URL(url);
-		
-		if (u.protocol === 'https:' && (port === 443 || port === 8123)) {
+
+		if (u.protocol === 'https:' && port === 443) {
 			u.port = '';
 		} else if (! u.port && port) {
 			u.port = port;
 		}
-		
+
 		this.opts.url = u.toString();
 
 		this.opts.username = this.opts.user || this.opts.username || USERNAME;
