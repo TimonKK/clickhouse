@@ -24,7 +24,7 @@ const clickhouse = new ClickHouse({
 	debug: false,
 	basicAuth: null,
 	isUseGzip: false,
-    format: "json", // "json" || "csv" || "tsv"
+	format: "json", // "json" || "csv" || "tsv"
 	config: {
 		session_id                              : 'session_id if neeed',
 		session_timeout                         : 60,
@@ -46,8 +46,8 @@ or change
 to
 
 	basicAuth: {
-	username: 'default',
-	password: '',
+		username: 'default',
+		password: '',
 	},
 
 
