@@ -124,8 +124,8 @@ function parseJSONStream() {
 }
 
 function parseTSVStream(s = new Set()) {
-    let isFirst = true;
-    let ref = {
+	let isFirst = true;
+	let ref = {
 		fields: []
 	};
  
@@ -782,7 +782,7 @@ class ClickHouse {
 					output_format_json_quote_64bit_integers : 0,
 					enable_http_compression                 : 0
 				},
-                format: 'json',
+				format: 'json',
 				isSessionPerQuery: false,
 			},
 			opts
@@ -952,6 +952,5 @@ class ClickHouse {
 }
 
 module.exports = {
-    ClickHouse,
+	ClickHouse,
 };
-
