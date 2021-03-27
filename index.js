@@ -194,7 +194,7 @@ function encodeValue(quote, v, _format, isArray) {
 			
 			// clickhouse allows to use unix timestamp in seconds
 			if (v instanceof Date) {
-				return ("" + v.valueOf()).substr (0, 10);
+				return Math.round(v.getTime() / 1000);
 			}
 			
 			// you can add array items
