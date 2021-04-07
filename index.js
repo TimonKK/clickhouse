@@ -474,7 +474,9 @@ class QueryCursor {
 			}
 			
 			// Hack for Sequelize ORM
-			query = query.trim().trimEnd().replace(/;$/gm, "");
+			// Remove comments from the SQL
+			// replace multiple white spaces with one white space
+			query = query.trim().trimEnd().replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ').replace(/;$/gm, '');
 			
 			if (query.match(/^(select|show|exists)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
@@ -521,7 +523,11 @@ class QueryCursor {
 			url.searchParams.append('session_id', me.opts.sessionId);
 		}
 		
-		url.searchParams.append('query', query);
+		// use formData transfer query body for long sql
+		if (typeof params['formData'] === 'undefined') {
+			params['formData'] = {}
+		}
+		params['formData']['query'] = query;
 		
 		if (me.connection.isUseGzip) {
 			params.headers['Accept-Encoding']  = 'gzip';
