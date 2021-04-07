@@ -655,7 +655,15 @@ class QueryCursor {
 		} else {
 			const streamParser = this.getStreamParser()();
 			
-			const rs = new Readable({ objectMode: true });
+			let requestStream
+			const rs = new Readable({
+				objectMode: true,
+				destroy: (err, cb) => {
+					if (requestStream) requestStream.abort()
+					cb(err);
+				}
+			});
+
 			rs._read = () => {};
 			rs.query = me.query;
 			
@@ -681,7 +689,7 @@ class QueryCursor {
 			
 			let metaData = {};
 			
-			const requestStream = request.post(reqParams);
+			requestStream = request.post(reqParams);
 			
 			// Не делаем .pipe(rs) потому что rs - Readable,
 			// а для pipe нужен Writable
