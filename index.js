@@ -346,7 +346,10 @@ class QueryCursor {
 		this.query = query;
 		this.data = data;
 		
-		this.opts = _.merge({}, opts,  { format: this.connection.opts.format });
+		this.opts = _.merge({}, opts,  {
+			format: this.connection.opts.format,
+			raw: this.connection.opts.raw
+		});
 		
 		// Sometime needs to override format by query
 		const formatFromQuery = ClickHouse.getFormatFromQuery(this.query);
@@ -563,7 +566,7 @@ class QueryCursor {
 			}
 
 			try {
-				const data = me.getBodyParser()(res.body);
+				const data = !this.opts.raw ? res.body : me.getBodyParser()(res.body);
 				
 				if (me.format === 'json') {
 					if (me.useTotals) {
@@ -783,6 +786,7 @@ class ClickHouse {
 					enable_http_compression                 : 0
 				},
 				format: 'json',
+				raw: false,
 				isSessionPerQuery: false,
 			},
 			opts

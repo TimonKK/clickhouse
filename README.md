@@ -25,6 +25,7 @@ const clickhouse = new ClickHouse({
 	basicAuth: null,
 	isUseGzip: false,
 	format: "json", // "json" || "csv" || "tsv"
+	raw: false,
 	config: {
 		session_id                              : 'session_id if neeed',
 		session_timeout                         : 60,
