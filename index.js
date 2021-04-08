@@ -566,7 +566,7 @@ class QueryCursor {
 			}
 
 			try {
-				const data = !this.opts.raw ? res.body : me.getBodyParser()(res.body);
+				const data = this.opts.raw ? res.body : me.getBodyParser()(res.body);
 				
 				if (me.format === 'json') {
 					if (me.useTotals) {
