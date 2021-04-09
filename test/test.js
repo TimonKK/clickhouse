@@ -529,7 +529,6 @@ describe('queries', () => {
 		const result8 = await rs.pipe(tf).pipe(ws2).exec();
 		expect(result8).to.be.ok();
 		clickhouse.isUseGzip = false;
-		
 		const result9 = await clickhouse.query('SELECT count(*) AS count FROM session_temp').toPromise();
 		const result10 = await clickhouse.query('SELECT count(*) AS count FROM session_temp2').toPromise();
 		expect(result9).to.eql(result10);
@@ -907,6 +906,42 @@ describe('Abort query', () => {
 		setTimeout(() => $q.destroy(), 10 * 1000);
 	});
 });
+
+describe('Raw response', () => {
+	it('"raw" parameter should return response as a raw CSV/TSV/JSON string', async () => {
+		const tableName = 'test_raw_response';
+		const insertValues = [
+			{id: 'fm', name: 'Freddie Mercury', age: 45},
+			{id: 'js', name: 'John Lennon', age: 40},
+			{id: 'ep', name: 'Elvis Presley', age: 42},
+		];
+		
+		const createResponse = await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS ${tableName} (id String, name String, age UInt8) ENGINE = MergeTree() ORDER BY id;
+		`).toPromise();
+		expect(createResponse).to.be.ok();
+
+		const insertResponse = await clickhouse.insert(`INSERT INTO ${tableName} (id, name, age)`, insertValues).toPromise();
+		expect(insertResponse).to.be.ok();
+
+		for (const format of ['csv', 'tsv', 'json']) {
+			const rawClient = new ClickHouse({...config, database, raw: true, format});
+			const result = await rawClient.query(`SELECT * FROM ${tableName}`).toPromise();
+			expect(typeof result).to.be.equal('string');
+
+			let data = rawClient.bodyParser(result);
+			format === 'json' && ({data} = data);
+			expect(data.length).to.be.equal(insertValues.length);
+			
+			for (const insertValue of insertValues) {
+				const resultValue = data.find(el => el.id === insertValue.id);
+				expect(resultValue).not.to.be.empty();
+				expect(resultValue).to.be.eql(insertValue);
+			}
+		}
+
+	})
+})
 
 after(async () => {
 	await clickhouse.query(`DROP DATABASE IF EXISTS ${database}`).toPromise();
