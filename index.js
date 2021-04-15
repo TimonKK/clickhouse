@@ -65,10 +65,16 @@ const PORT = 8123;
 const DATABASE = 'default';
 const USERNAME = 'default';
 
+const FORMAT_NAMES = {
+	JSON: 'json',
+	TSV: 'tsv',
+	CSV: 'csv'
+}
+
 const FORMATS = {
-	'json': 'JSON',
-	'tsv': 'TabSeparatedWithNames',
-	'csv': 'CSVWithNames',
+	[FORMAT_NAMES.JSON]: 'JSON',
+	[FORMAT_NAMES.TSV]: 'TabSeparatedWithNames',
+	[FORMAT_NAMES.CSV]: 'CSVWithNames',
 };
 
 const REVERSE_FORMATS = Object.keys(FORMATS).reduce(
@@ -346,7 +352,10 @@ class QueryCursor {
 		this.query = query;
 		this.data = data;
 		
-		this.opts = _.merge({}, opts,  { format: this.connection.opts.format });
+		this.opts = _.merge({}, opts,  {
+			format: this.connection.opts.format,
+			raw: this.connection.opts.raw
+		});
 		
 		// Sometime needs to override format by query
 		const formatFromQuery = ClickHouse.getFormatFromQuery(this.query);
@@ -563,14 +572,14 @@ class QueryCursor {
 			}
 
 			try {
-				const data = me.getBodyParser()(res.body);
+				const data = this.opts.raw ? res.body : me.getBodyParser()(res.body);
 				
-				if (me.format === 'json') {
+				if (me.format === FORMAT_NAMES.JSON) {
 					if (me.useTotals) {
 						return cb(null, data);
 					}
 					
-					return cb(null, data.data);
+					return this.opts.raw ? cb(null, data) : cb(null, data.data);
 				}
 				
 				if (me.useTotals) {
@@ -591,15 +600,15 @@ class QueryCursor {
 	}
 
 	getBodyParser() {
-		if (this.format === 'json') {
+		if (this.format === FORMAT_NAMES.JSON) {
 			return JSON.parse;
 		}
 		
-		if (this.format === 'tsv') {
+		if (this.format === FORMAT_NAMES.TSV) {
 			return parseTSV;
 		}
 		
-		if (this.format === 'csv') {
+		if (this.format === FORMAT_NAMES.CSV) {
 			return parseCSV;
 		}
 		
@@ -607,15 +616,15 @@ class QueryCursor {
 	};
 	
 	getStreamParser() {
-		if (this.format === 'json') {
+		if (this.format === FORMAT_NAMES.JSON) {
 			return parseJSONStream;
 		}
 		
-		if (this.format === 'tsv') {
+		if (this.format === FORMAT_NAMES.TSV) {
 			return parseTSVStream;
 		}
 		
-		if (this.format === 'csv') {
+		if (this.format === FORMAT_NAMES.CSV) {
 			return parseCSVStream;
 		}
 		
@@ -782,7 +791,8 @@ class ClickHouse {
 					output_format_json_quote_64bit_integers : 0,
 					enable_http_compression                 : 0
 				},
-				format: 'json',
+				format: FORMAT_NAMES.JSON,
+				raw: false,
 				isSessionPerQuery: false,
 			},
 			opts
@@ -887,6 +897,16 @@ class ClickHouse {
 		this.opts.isUseGzip = !!val;
 		
 		this.opts.config.enable_http_compression = this.opts.isUseGzip ? 1 : 0;
+	}
+
+	get bodyParser() {
+		if (this.opts.format === FORMAT_NAMES.CSV) {
+			return parseCSV;
+		} else if (this.opts.format === FORMAT_NAMES.TSV) {
+			return parseTSV;
+		} else {
+			return JSON.parse;
+		}
 	}
 	
 	static mapRowAsArray(row) {
