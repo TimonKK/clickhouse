@@ -34,6 +34,14 @@ before(async () => {
 	await temp.query(`CREATE DATABASE ${database}`).toPromise();
 });
 
+describe('On cluster', () => {
+  it('should work', async () => {
+    const query = 'create table test_table on cluster test_shard_localhost (a int) ENGINE=MergeTree;';
+    const r = await clickhouse.query(query).toPromise();
+    expect(r).to.be.ok();
+  });
+});
+
 describe('Exec', () => {
 	it('should return not null object', async () => {
 		const sqlList = [
