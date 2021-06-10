@@ -483,9 +483,13 @@ class QueryCursor {
 			}
 			
 			// Hack for Sequelize ORM
-			// Remove comments from the SQL
-			// replace multiple white spaces with one white space
-			query = query.trim().trimEnd().replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ').replace(/;$/gm, '');
+			query = query.trim().trimEnd().replace(/;$/gm, '');
+			console.log('test me', me, me.connection);
+			if (me.connection.trimQuery) {
+				// Remove comments from the SQL
+				// replace multiple white spaces with one white space
+				query = query.replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ')
+			}
 			
 			if (query.match(/^(select|show|exists)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
@@ -531,12 +535,16 @@ class QueryCursor {
 		if (me.opts.sessionId !== undefined && typeof me.opts.sessionId === 'string') {
 			url.searchParams.append('session_id', me.opts.sessionId);
 		}
-		
-		// use formData transfer query body for long sql
-		if (typeof params['formData'] === 'undefined') {
-			params['formData'] = {}
+
+		if (me.connection.usePost) {
+			// use formData transfer query body for long sql
+			if (typeof params['formData'] === 'undefined') {
+				params['formData'] = {}
+			}
+			params['formData']['query'] = query;
+		} else {
+			url.searchParams.append('query', query);
 		}
-		params['formData']['query'] = query;
 		
 		if (me.connection.isUseGzip) {
 			params.headers['Accept-Encoding']  = 'gzip';
@@ -800,6 +808,8 @@ class ClickHouse {
 				format: FORMAT_NAMES.JSON,
 				raw: false,
 				isSessionPerQuery: false,
+				trimQuery: false,
+				usePost: false,
 			},
 			opts
 		);
@@ -913,6 +923,24 @@ class ClickHouse {
 		} else {
 			return JSON.parse;
 		}
+	}
+
+	get trimQuery() {
+		return this.opts.trimQuery;
+	}
+
+	set trimQuery(val) {
+		this.opts.trimQuery = !!val;
+		return this;
+	}
+
+	get usePost() {
+		return this.opts.usePost;
+	}
+
+	set usePost(val) {
+		this.opts.usePost = !!val;
+		return this;
 	}
 	
 	static mapRowAsArray(row) {
