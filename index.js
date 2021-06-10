@@ -484,7 +484,6 @@ class QueryCursor {
 			
 			// Hack for Sequelize ORM
 			query = query.trim().trimEnd().replace(/;$/gm, '');
-			console.log('test me', me, me.connection);
 			if (me.connection.trimQuery) {
 				// Remove comments from the SQL
 				// replace multiple white spaces with one white space
