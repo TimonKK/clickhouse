@@ -466,7 +466,61 @@ describe('queries', () => {
 		).toPromise();
 		expect(r2).to.be.ok();
 	});
+
+	it('insert field as raw string', async () => {
+		clickhouse.sessionId = Date.now();
+		
+		const r = await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS test_raw_string (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8),
+				fixedStr String
+			) ENGINE=MergeTree(date, date, 8192)
+		`).toPromise();
+		expect(r).to.be.ok();
+		
+		const rows = [
+			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'))',
+			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет!\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
+		];
+		
+		const r2 = await clickhouse.insert(
+			'INSERT INTO test_raw_string (date, str, arr, arr2, arr3, fixedStr) VALUES',
+			rows
+		).toPromise();
+		expect(r2).to.be.ok();
+	});
 	
+	it('insert stream accept raw string', async () => {		
+		const r = await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS test_insert_stream_raw_string (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8),
+				fixedStr FixedString(12)
+			) ENGINE=MergeTree(date, date, 8192)
+		`).toPromise();
+		expect(r).to.be.ok();
+		
+		const rows = [
+			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'))',
+			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет!\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
+		];
+		
+		const stream = await clickhouse.insert(
+			'INSERT INTO test_insert_stream_raw_string (date, str, arr, arr2, arr3, fixedStr) VALUES',
+		).stream();
+		stream.writeRow(rows[0]);
+		stream.writeRow(rows[1]);
+		const r2 = await stream.exec();
+		expect(r2).to.be.ok();
+	});
+
 	it('select, insert and two pipes', async () => {
 		const result = await clickhouse.query('DROP TABLE IF EXISTS session_temp').toPromise();
 		expect(result).to.be.ok();
