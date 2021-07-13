@@ -494,7 +494,9 @@ describe('queries', () => {
 		expect(r2).to.be.ok();
 	});
 	
-	it('insert stream accept raw string', async () => {		
+	it('insert stream accept raw string', async () => {
+		clickhouse.sessionId = Date.now();
+		
 		const r = await clickhouse.query(`
 			CREATE TABLE IF NOT EXISTS test_insert_stream_raw_string (
 				date Date,
