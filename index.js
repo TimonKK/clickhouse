@@ -68,7 +68,8 @@ const USERNAME = 'default';
 const FORMAT_NAMES = {
 	JSON: 'json',
 	TSV: 'tsv',
-	CSV: 'csv'
+	CSV: 'csv',
+	XML: 'xml,'
 }
 
 const FORMATS = {
@@ -651,15 +652,15 @@ class QueryCursor {
 	
 	stream() {
 		const me = this;
-		
+
 		const reqParams = me._getReqParams();
-		
+
 		if (me.isInsert) {
 			const rs = new Rs(reqParams);
 			rs.query = me.query;
-			
+
 			me._request = rs;
-			
+
 			return rs;
 		}
 
@@ -684,23 +685,23 @@ class QueryCursor {
 				rs.__pause();
 				requestStream.pause();
 			};
-			
+
 			rs.resume = () => {
 				rs.__resume();
 				requestStream.resume();
 			};
 		} else {
 			const streamParser = this.getStreamParser()();
-			
+
 			const tf = new Transform({ objectMode: true });
 			let isFirstChunk = true;
 			tf._transform = function (chunk, encoding, cb) {
-				
+
 				// В независимости от формата, в случае ошибки, в теле ответа будет текс,
 				// подпадающий под регулярку R_ERROR.
 				if (isFirstChunk) {
 					isFirstChunk = false;
-					
+
 					if (R_ERROR.test(chunk.toString())) {
 						streamParser.emit('error', new Error(chunk.toString()));
 						rs.emit('close');
