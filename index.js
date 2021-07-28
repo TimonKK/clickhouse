@@ -661,6 +661,18 @@ class QueryCursor {
 			me._request = rs;
 			
 			return rs;
+		} else if (me.opts.raw) {
+			const requestStream = request.post(reqParams);
+			
+			let s;
+			if (me.connection.isUseGzip) {
+				const z = zlib.createGunzip();
+				s = requestStream.pipe(z);
+			} else {
+				s = requestStream;
+			}
+
+			return s;
 		} else {
 			const streamParser = this.getStreamParser()();
 			
