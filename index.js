@@ -680,6 +680,11 @@ class QueryCursor {
 		}
 
 		if (me.opts.raw) {
+			if (me.format === 'json') {
+				// Only pass through "data" array.
+				s = s.pipe(JSONStream.parse(['data', true])).pipe(JSONStream.stringify());
+			}
+
 			rs.pause  = () => {
 				rs.__pause();
 				requestStream.pause();
@@ -712,7 +717,7 @@ class QueryCursor {
 				cb(null, chunk);
 			};
 			
-			s = s.pipe(tf).pipe(streamParser)
+			s = s.pipe(tf).pipe(streamParser);
 
 			rs.pause  = () => {
 				rs.__pause();
