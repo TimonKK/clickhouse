@@ -68,8 +68,7 @@ const USERNAME = 'default';
 const FORMAT_NAMES = {
 	JSON: 'json',
 	TSV: 'tsv',
-	CSV: 'csv',
-	XML: 'xml,'
+	CSV: 'csv'
 }
 
 const FORMATS = {
