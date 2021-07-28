@@ -661,7 +661,7 @@ class QueryCursor {
 			me._request = rs;
 			
 			return rs;
-		} else if (me.opts.raw) {
+		} else if (me.opts.raw && me.format !== FORMAT_NAMES.JSON) {
 			const requestStream = request.post(reqParams);
 			
 			let s;
