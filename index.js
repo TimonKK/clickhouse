@@ -352,10 +352,10 @@ class QueryCursor {
 		this.query = query;
 		this.data = data;
 		
-		this.opts = _.merge({}, opts,  {
+		this.opts = _.merge({}, {
 			format: this.connection.opts.format,
 			raw: this.connection.opts.raw
-		});
+		}, opts);
 		
 		// Sometime needs to override format by query
 		const formatFromQuery = ClickHouse.getFormatFromQuery(this.query);
