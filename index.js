@@ -285,7 +285,9 @@ class Rs extends Transform {
 	writeRow(data) {
 		let row = '';
 		
-		if (Array.isArray(data)) {
+		if (typeof data === 'string') {
+			row = data;
+		} else if (Array.isArray(data)) {
 			row = ClickHouse.mapRowAsArray(data);
 		} else if (isObject(data)) {
 			throw new Error('Error: Inserted data must be an array, not an object.');
@@ -399,7 +401,9 @@ class QueryCursor {
 			fieldList       = [],
 			isFirstElObject = false;
 		
-		if (Array.isArray(data) && Array.isArray(data[0])) {
+		if(Array.isArray(data) && data.every(d => typeof d === 'string')) {
+			values = data;
+		} else if (Array.isArray(data) && Array.isArray(data[0])) {
 			values = data;
 		} else if (Array.isArray(data) && isObject(data[0])) {
 			values = data;
@@ -421,6 +425,9 @@ class QueryCursor {
 		}
 		
 		return values.map(row => {
+			if (typeof row === 'string') {
+				return row;
+			}
 			if (isFirstElObject) {
 				return ClickHouse.mapRowAsObject(fieldList, row);
 			} else {
@@ -515,10 +522,12 @@ class QueryCursor {
 				}
 			} else if (me.isInsert) {
 				if (query.match(/values/i)) {
-					//
+					if (data && data.every(d => typeof d === 'string')) {
+						params['body'] = me._getBodyForInsert();
+					}
 				} else {
 					query += ' FORMAT TabSeparated';
-					
+
 					if (data) {
 						params['body'] = me._getBodyForInsert();
 					}

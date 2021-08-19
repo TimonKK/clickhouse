@@ -13,7 +13,7 @@ declare module 'clickhouse' {
   }
 
   export class WriteStream extends Stream.Transform {
-    writeRow(data: Array<any>): Promise<void>;
+    writeRow(data: Array<any> | string): Promise<void>;
     exec(): Promise<{}>;
   }
 
