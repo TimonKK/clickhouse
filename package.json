@@ -51,7 +51,7 @@
   "bundleDependencies": [],
   "dependencies": {
     "JSONStream": "1.3.4",
-    "lodash": "4.17.19",
+    "lodash": "4.17.21",
     "querystring": "0.2.0",
     "request": "2.88.0",
     "stream2asynciter": "1.0.2",
