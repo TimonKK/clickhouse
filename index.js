@@ -63,7 +63,6 @@ const URI = 'localhost';
 const PORT = 8123;
 
 const DATABASE = 'default';
-const USERNAME = 'default';
 
 const FORMAT_NAMES = {
 	JSON: 'json',
@@ -825,7 +824,9 @@ class ClickHouse {
 
 		this.opts.url = u.toString();
 
-		this.opts.username = this.opts.user || this.opts.username || USERNAME;
+		if (this.opts.user || this.opts.username) {
+			this.opts.username = this.opts.user || this.opts.username;
+		}
 		
 		
 		if (this.opts.config) {
