@@ -817,7 +817,7 @@ class ClickHouse {
 		
 		const u = new URL(url);
 
-		if (u.protocol === 'https:' && port === 443) {
+		if (u.protocol === 'https:' && (port === 443 || !opts.port)) {
 			u.port = '';
 		} else if (! u.port && port) {
 			u.port = port;

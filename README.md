@@ -198,9 +198,20 @@ const result = await rs.pipe(tf).pipe(ws).exec();
 
 ***
 
+**Run Tests**:
+
+```
+npm install
+npm run test
+# or
+# node_modules/.bin/mocha --timeout 60000 --slow 5000 -f "SPECIFIC TEST NAME"
+```
+
+***
+
 **Changelogs**:
 * 2020-11-02 (v2.2.0) ___Backward Incompatible Change___
-    - port from url more important then port from config
+    - port from url more important than port from config
 * 2020-04-17 (v2.1.0)
     - Fix query with totals. For json formats work perfect, but for another - doesn't
 * 2019-02-13

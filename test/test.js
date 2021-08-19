@@ -425,6 +425,13 @@ describe('TLS/SSL Protocol', () => {
 			throw err;
 		}
 	});
+	it('default HTTPS port is 433', async () => {
+		const clickhouse = new ClickHouse({
+			...config,
+			url       : 'https://localhost'
+		});
+		expect(clickhouse.opts.url).to.match(/localhost\//);
+	});
 });
 
 describe('queries', () => {
