@@ -210,6 +210,9 @@ npm run test
 ***
 
 **Changelogs**:
+* 2020-11-02 (v2.4.1)
+	- Merge list of PR
+	- fix test with Base Auth check
 * 2020-11-02 (v2.2.0) ___Backward Incompatible Change___
     - port from url more important than port from config
 * 2020-04-17 (v2.1.0)
