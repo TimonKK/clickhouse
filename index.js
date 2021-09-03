@@ -417,7 +417,7 @@ class QueryCursor {
 		if (isFirstElObject) {
 			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/);
 			if (m) {
-				fieldList = m[2].split(',').map(s => s.trim());
+				fieldList = m[2].split(',').map(s => s.replace(/"|`/g, '').trim());
 			} else {
 				throw new Error('insert query wasnt parsed field list after TABLE_NAME');
 			}
