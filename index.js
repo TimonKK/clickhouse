@@ -302,6 +302,7 @@ class Rs extends Transform {
 			return Promise.resolve();
 		} else {
 			return new Promise((resolve, reject) => {
+				this.ws.once('error', err => reject(err));
 				this.ws.once('drain', err => {
 					if (err) return reject(err);
 					
