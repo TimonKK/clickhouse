@@ -91,5 +91,5 @@
     "test": "mocha --bail --timeout 60000 --slow 5000"
   },
   "types": "index.d.ts",
-  "version": "2.4.1"
+  "version": "2.4.2"
 }
