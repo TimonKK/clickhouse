@@ -56,7 +56,7 @@ var ESCAPE_NULL = {
 	JSONEachRow: "\\N",
 };
 
-const R_ERROR = new RegExp('Code: ([0-9]{2}), .*Exception:');
+const R_ERROR = new RegExp('(Code|Error): ([0-9]{2})[,.] .*Exception: (.+?)$', 'm');
 
 const URI = 'localhost';
 
@@ -232,12 +232,12 @@ function getErrorObj(res) {
 	if (res.body) {
 		const m = res.body.match(R_ERROR);
 		if (m) {
-			if (m[1] && isNaN(parseInt(m[1])) === false) {
-				err.code = parseInt(m[1]);
+			if (m[2] && isNaN(parseInt(m[2])) === false) {
+				err.code = parseInt(m[2]);
 			}
 			
-			if (m[2]) {
-				err.message = m[2];
+			if (m[3]) {
+				err.message = m[3];
 			}
 		}
 	}
