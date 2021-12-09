@@ -34,6 +34,19 @@ before(async () => {
 	await temp.query(`CREATE DATABASE ${database}`).toPromise();
 });
 
+describe('On cluster', () => {
+	// Note: this test only works with ClickHouse setup as Cluster named test_cluster
+	it('should be able to create table', async () => {
+		const query = `
+			CREATE TABLE ${database}.test_on_cluster ON CLUSTER test_cluster (
+				test String
+			)
+			ENGINE=MergeTree ORDER BY test;`;
+	  	const r = await clickhouse.query(query).toPromise();
+	  	expect(r).to.be.ok();
+	});
+});
+  
 describe('Exec', () => {
 	it('should return not null object', async () => {
 		const sqlList = [
