@@ -36,14 +36,19 @@ before(async () => {
 
 describe('On cluster', () => {
 	// Note: this test only works with ClickHouse setup as Cluster named test_cluster
-	it('should be able to create table', async () => {
-		const query = `
+	it('should be able to create and drop a table', async () => {
+		const createTableQuery = `
 			CREATE TABLE ${database}.test_on_cluster ON CLUSTER test_cluster (
 				test String
 			)
 			ENGINE=MergeTree ORDER BY test;`;
-	  	const r = await clickhouse.query(query).toPromise();
-	  	expect(r).to.be.ok();
+	  	const createTableQueryResult = await clickhouse.query(createTableQuery).toPromise();
+	  	expect(createTableQueryResult).to.be.ok();
+
+		const dropTableQuery = `
+			DROP TABLE ${database}.test_on_cluster ON CLUSTER test_cluster;`;
+	  	const dropTableQueryResult = await clickhouse.query(dropTableQuery).toPromise();
+	  	expect(dropTableQueryResult).to.be.ok();
 	});
 });
   
