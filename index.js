@@ -483,7 +483,21 @@ class QueryCursor {
 		
 		let data = me.data;
 		let query = me.query;
-		
+
+		// check for any query params passed for interpolation
+		// https://clickhouse.com/docs/en/interfaces/http/#cli-queries-with-parameters
+		if (data && data.params) {
+
+			// each variable used in the query is expected to be prefixed with `param_`
+			//   when passed in the request.
+			Object.keys(data.params).forEach(k => {
+				url.searchParams.append(
+					`param_${k}`, JSON.stringify(data.params[k])
+				);
+			});
+
+		}
+
 		if (typeof query === 'string') {
 			if (/with totals/i.test(query)) {
 				me.useTotals = true;
