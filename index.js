@@ -491,8 +491,15 @@ class QueryCursor {
 			// each variable used in the query is expected to be prefixed with `param_`
 			//   when passed in the request.
 			Object.keys(data.params).forEach(k => {
+
+				let value = data.params[k].toString();
+
+				if (Array.isArray(data.params[k])) {
+					value = '[' + value + ']'
+				};
+
 				url.searchParams.append(
-					`param_${k}`, JSON.stringify(data.params[k])
+					`param_${k}`, value
 				);
 			});
 
