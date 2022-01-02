@@ -195,6 +195,20 @@ const ws = clickhouse.insert('INSERT INTO session_temp2').stream();
 
 const result = await rs.pipe(tf).pipe(ws).exec();
 ```
+***
+
+Parameterized Values:
+```javascript
+const rows = await clickhouse.query(
+	'SELECT * AS count FROM temp_table WHERE version = {ver:UInt16}',
+	{
+		params: {
+			ver: 1
+		},
+	}
+).toPromise();
+```
+For more information on encoding in the query, see [this section](https://clickhouse.com/docs/en/interfaces/http/#cli-queries-with-parameters) of the ClickHouse documentation.
 
 ***
 
