@@ -937,6 +937,15 @@ describe('Select and WITH TOTALS statement', () => {
 		expect(result.rows).to.be(LIMIT_COUNT);
 		expect(result).to.have.key('statistics');
 	});
+
+	it('start with WITH', async() => {
+		const r = await clickhouse.query(`
+			WITH x as (SELECT 1) SELECT * FROM x
+		`).toPromise();
+
+		expect(r).to.be.ok();
+		expect(r[0]).to.be.eql({1: 1});
+	});
 });
 
 describe('Abort query', () => {

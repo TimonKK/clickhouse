@@ -492,7 +492,7 @@ class QueryCursor {
 			// Hack for Sequelize ORM
 			query = query.trim().trimEnd().replace(/;$/gm, "");
 			
-			if (query.match(/^(select|show|exists)/i)) {
+			if (query.match(/^(with|select|show|exists)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
 					query += ` FORMAT ${ClickHouse.getFullFormatName(me.format)}`;
 				}
