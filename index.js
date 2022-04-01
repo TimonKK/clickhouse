@@ -302,12 +302,16 @@ class Rs extends Transform {
 			return Promise.resolve();
 		} else {
 			return new Promise((resolve, reject) => {
-				this.ws.once('error', err => reject(err));
+				const fn = err => reject(err);
+				this.ws.once('error', fn);
 				this.ws.once('drain', err => {
-					if (err) return reject(err);
-					
-					resolve();
-				})
+					this.ws.removeListener('error', fn);
+					if (err) {
+						reject(err);
+					} else {
+						resolve();
+					}
+				});
 			});
 		}
 	}
@@ -483,16 +487,42 @@ class QueryCursor {
 		
 		let data = me.data;
 		let query = me.query;
-		
+
+		// check for any query params passed for interpolation
+		// https://clickhouse.com/docs/en/interfaces/http/#cli-queries-with-parameters
+		if (data && data.params) {
+
+			// each variable used in the query is expected to be prefixed with `param_`
+			//   when passed in the request.
+			Object.keys(data.params).forEach(k => {
+
+				let value = data.params[k].toString();
+
+				if (Array.isArray(data.params[k])) {
+					value = '[' + value + ']'
+				};
+
+				url.searchParams.append(
+					`param_${k}`, value
+				);
+			});
+
+		}
+
 		if (typeof query === 'string') {
 			if (/with totals/i.test(query)) {
 				me.useTotals = true;
 			}
 			
 			// Hack for Sequelize ORM
-			query = query.trim().trimEnd().replace(/;$/gm, "");
+			query = query.trim().trimEnd().replace(/;$/gm, '');
+			if (me.connection.trimQuery) {
+				// Remove comments from the SQL
+				// replace multiple white spaces with one white space
+				query = query.replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ')
+			}
 			
-			if (query.match(/^(select|show|exists|create|drop)/i)) {
+			if (query.match(/^(with|select|show|exists|create|drop)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
 					query += ` FORMAT ${ClickHouse.getFullFormatName(me.format)}`;
 				}
@@ -538,8 +568,16 @@ class QueryCursor {
 		if (me.opts.sessionId !== undefined && typeof me.opts.sessionId === 'string') {
 			url.searchParams.append('session_id', me.opts.sessionId);
 		}
-		
-		url.searchParams.append('query', query);
+
+		if (me.connection.usePost) {
+			// use formData transfer query body for long sql
+			if (typeof params['formData'] === 'undefined') {
+				params['formData'] = {}
+			}
+			params['formData']['query'] = query;
+		} else {
+			url.searchParams.append('query', query);
+		}
 		
 		if (me.connection.isUseGzip) {
 			params.headers['Accept-Encoding']  = 'gzip';
@@ -803,6 +841,8 @@ class ClickHouse {
 				format: FORMAT_NAMES.JSON,
 				raw: false,
 				isSessionPerQuery: false,
+				trimQuery: false,
+				usePost: false,
 			},
 			opts
 		);
@@ -918,6 +958,24 @@ class ClickHouse {
 		} else {
 			return JSON.parse;
 		}
+	}
+
+	get trimQuery() {
+		return this.opts.trimQuery;
+	}
+
+	set trimQuery(val) {
+		this.opts.trimQuery = !!val;
+		return this;
+	}
+
+	get usePost() {
+		return this.opts.usePost;
+	}
+
+	set usePost(val) {
+		this.opts.usePost = !!val;
+		return this;
 	}
 	
 	static mapRowAsArray(row) {

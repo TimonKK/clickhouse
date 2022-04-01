@@ -293,6 +293,34 @@ describe('Select', () => {
 				});
 		});
 	});
+
+	it('parameterized ', callback => {
+
+		let params_sql =  `SELECT
+			number,
+			toString(number * 2) AS str,
+			toDate(number + 1) AS date
+		FROM numbers(10)
+		WHERE number = {num:UInt64}
+		  OR number IN {nums:Array(UInt64)}`;
+
+		let params_data = {
+			params: {
+				num: 0,
+				nums: [1,2]
+			}
+		}
+
+		clickhouse.query(params_sql, params_data).exec((err, rows) => {
+			expect(err).to.not.be.ok();
+			
+			expect(rows).to.have.length(3);
+			expect(rows[0]).to.eql({ number: 0, str: '0', date: '1970-01-02' });
+			
+			callback();
+		});
+	});
+
 });
 
 describe('session', () => {
@@ -954,6 +982,15 @@ describe('Select and WITH TOTALS statement', () => {
 		expect(result).to.have.key('rows');
 		expect(result.rows).to.be(LIMIT_COUNT);
 		expect(result).to.have.key('statistics');
+	});
+
+	it('start with WITH', async() => {
+		const r = await clickhouse.query(`
+			WITH x as (SELECT 1) SELECT * FROM x
+		`).toPromise();
+
+		expect(r).to.be.ok();
+		expect(r[0]).to.be.eql({1: 1});
 	});
 });
 
