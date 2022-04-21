@@ -7,8 +7,8 @@ declare module 'clickhouse' {
 
   export class ClickHouse {
     constructor(opts: Object);
-    query(query: String, reqParams?: object): QueryCursor;
-    insert(query: String, data?: object): QueryCursor;
+    query<R extends Object[] = Object[]>(query: String, reqParams?: object): QueryCursor<R>;
+    insert<R extends Object[] = Object[]>(query: String, data?: object): QueryCursor<R>;
     sessionId: string;
   }
 
@@ -17,8 +17,8 @@ declare module 'clickhouse' {
     exec(): Promise<{}>;
   }
 
-  class QueryCursor {
-    toPromise(): Promise<Object[]>;
+  class QueryCursor<R extends Object[] = Object[]> {
+    toPromise(): Promise<R>;
     exec(callback: callbackExec): void;
     stream(): Stream & WriteStream;
   }
