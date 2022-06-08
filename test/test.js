@@ -144,6 +144,22 @@ describe('Select', () => {
 				callback();
 			})
 	});
+
+	it('streams should handle network error', function(callback) {
+		let i = 0;
+		const host = 'non-existing-clickhouse-server'; // to simulate a dns failure
+
+		new ClickHouse({
+			...config,
+			host
+		}).query('SELECT number FROM system.numbers LIMIT 10').stream()
+			.on('data', () => ++i)
+			.on('error', error => {
+				expect(error.message).to.be.equal(`getaddrinfo ENOTFOUND ${host}`);
+				expect(i).to.be(0);				
+				callback();
+			});
+	});
 	
 	const nodeVersion = process.version.split('.')[0].substr(1);
 	if (parseInt(nodeVersion, 10) >= 10) {
