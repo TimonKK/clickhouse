@@ -472,7 +472,10 @@ describe('queries', () => {
 				str String,
 				arr Array(String),
 				arr2 Array(Date),
-				arr3 Array(UInt8)
+				arr3 Array(UInt8),
+				rec Map(String, String),
+				rec2 Map(String, Date),
+				rec3 Map(String, UInt8)
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
 		expect(r).to.be.ok();
@@ -483,7 +486,10 @@ describe('queries', () => {
 				str: 'Вам, проживающим за оргией оргию,',
 				arr: [],
 				arr2: ['1915-01-02', '1915-01-03'],
-				arr3: [1,2,3,4,5]
+				arr3: [1, 2, 3, 4, 5],
+				rec: {},
+				rec2: { a: '1915-01-02', b: '1915-01-03' },
+				rec3: { a: 1, b: 2, c: 3, d: 4, e: 5 },
 			},
 			
 			{
@@ -491,12 +497,15 @@ describe('queries', () => {
 				str: 'имеющим ванную и теплый клозет!',
 				arr: ['5670000000', 'asdas dasf'],
 				arr2: ['1915-02-02'],
-				arr3: []
+				arr3: [],
+				rec: { a: '5670000000', b: 'asdas dasf' },
+				rec2: { a: '1915-02-02' },
+				rec3: {},
 			}
 		];
 		
 		const r2 = await clickhouse.insert(
-			'INSERT INTO test_array (date, str, arr, arr2, arr3)',
+			'INSERT INTO test_array (date, str, arr, arr2, arr3, rec, rec2, rec3)',
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
@@ -512,18 +521,21 @@ describe('queries', () => {
 				arr Array(String),
 				arr2 Array(Date),
 				arr3 Array(UInt8),
-				fixedStr String
+				fixedStr String,
+				rec Map(String, String),
+				rec2 Map(String, DateTime),
+				rec3 Map(String, UInt8)
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
 		expect(r).to.be.ok();
 		
 		const rows = [
-			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'))',
-			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет!\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
+			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'),{},{\'a\':\'1915-01-02 10:00:00\',\'b\':\'1915-01-03 10:00:00\'},{\'a\':1,\'b\':2,\'c\':3,\'d\':4,\'e\':5})',
+			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет!\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'),{\'a\':\'5670000000\',\'b\':\'asdas dasf\'},{\'a\':\'1915-02-02 10:00:00\'},{})'
 		];
 		
 		const r2 = await clickhouse.insert(
-			'INSERT INTO test_raw_string (date, str, arr, arr2, arr3, fixedStr) VALUES',
+			'INSERT INTO test_raw_string (date, str, arr, arr2, arr3, fixedStr, rec, rec2, rec3) VALUES',
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
