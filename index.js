@@ -218,7 +218,7 @@ function encodeValue(quote, v, _format, isArray) {
 				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
 			}
 			
-			return JSON.stringify(v).replaceAll("\"", "'");
+			return JSON.stringify(v).replace(/\"/g, "'");
 		case 'boolean':
 			return v === true ? 1 : 0;
 		default:
