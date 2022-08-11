@@ -552,7 +552,7 @@ class QueryCursor {
 				}
 			} else if (me.isInsert) {
 				if (query.match(/values/i)) {
-					if (data && data.every(d => typeof d === 'string')) {
+					if (data && Array.isArray(data) && data.every(d => typeof d === 'string')) {
 						params['body'] = me._getBodyForInsert();
 					}
 				} else {
