@@ -522,7 +522,7 @@ class QueryCursor {
 				query = query.replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ')
 			}
 			
-			if (query.match(/^(with|select|show|exists)/i)) {
+			if (query.match(/^(with|select|show|exists|create|drop)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
 					query += ` FORMAT ${ClickHouse.getFullFormatName(me.format)}`;
 				}
