@@ -500,7 +500,11 @@ class QueryCursor {
 
 				if (Array.isArray(data.params[k])) {
 					value = '[' + value + ']'
-				};
+				} 
+				else {
+					const str = JSON.stringify(value);
+					value = str.substring(1,str.length-1);
+				}
 
 				url.searchParams.append(
 					`param_${k}`, value
