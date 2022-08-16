@@ -739,6 +739,11 @@ class QueryCursor {
 			
 			const requestStream = request.post(reqParams);
 			
+			// handle network socket errors to avoid uncaught error
+			requestStream.on('error', function (err) {
+				rs.emit('error', err);
+			});
+
 			// Не делаем .pipe(rs) потому что rs - Readable,
 			// а для pipe нужен Writable
 			let s;
