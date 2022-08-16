@@ -155,7 +155,9 @@ describe('Select', () => {
 		}).query('SELECT number FROM system.numbers LIMIT 10').stream()
 			.on('data', () => ++i)
 			.on('error', error => {
-				expect(error.message).to.be.equal(`getaddrinfo ENOTFOUND ${host}`);
+				expect(error.code).to.be.equal('ENOTFOUND');
+				expect(error.syscall).to.be.equal('getaddrinfo');
+				expect(error.hostname).to.be.equal(host);
 				expect(i).to.be(0);				
 				callback();
 			});
