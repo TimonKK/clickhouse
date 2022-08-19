@@ -5,15 +5,21 @@ const expect = require('expect.js');
 const _  = require('lodash');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 
 const { ClickHouse } = require('../.');
 
 const database = 'test_' + _.random(1000, 100000);
 
 const
+	configFilepath = process.env.CLICKHOUSE_TEST_CONF_FILE || './test_config.json',
+    configPath = path.resolve(process.cwd(), configFilepath),
+    extConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, { encoding: 'utf-8' })) : undefined,
 	config     = {
-		debug: false,
+		...extConfig,
+		debug: false,		
 	},
+
 	clickhouse = new ClickHouse({
 		...config,
 		database : database,
@@ -341,7 +347,7 @@ describe('Select', () => {
 
 });
 
-describe('session', () => {
+(extConfig? describe.skip : describe)('session', () => {
 	it('use session', async () => {
 		const sessionId = clickhouse.sessionId;
 		clickhouse.sessionId = Date.now();
@@ -443,7 +449,8 @@ describe('session', () => {
 // You can use all settings from request library (https://github.com/request/request#tlsssl-protocol)
 // Generate ssl file with:
 // sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout test/cert/server.key -out test/cert/server.crt
-describe('TLS/SSL Protocol', () => {
+
+(extConfig? describe.skip : describe)('TLS/SSL Protocol', () => {
 	it('use TLS/SSL Protocol', async () => {
 		let server = null;
 
@@ -693,6 +700,42 @@ describe('queries', () => {
 		const result4 = await clickhouse.query('SELECT int_value FROM test_int_temp').toPromise();
 		expect(result4).to.eql(int_value_data);
 	});
+
+	it('insert with params', async () => {
+		const result = await clickhouse.query('DROP TABLE IF EXISTS test_par_temp').toPromise();
+		expect(result).to.be.ok();
+		
+		const result1 = await clickhouse.query(`CREATE TABLE test_par_temp (
+			int_value UInt32, 
+			str_value1 String, 
+			str_value2 String, 
+			date_value Date, 
+			date_time_value DateTime, 
+			decimal_value Decimal(10,4) 
+			) ENGINE=Memory`).toPromise();
+		expect(result1).to.be.ok();
+		
+		const row = {
+			int_value: 12345,
+			str_value1: 'Test for "masked" characters. It workes, isn\'t it?',
+			str_value2: JSON.stringify({name:'It is "something".'}),
+			date_value: '2022-08-18',
+			date_time_value: '2022-08-18 19:07:00',
+			decimal_value: 1234.678,
+		};
+		const result2 = await clickhouse.insert(`INSERT INTO test_par_temp (int_value, str_value1, str_value2, date_value, date_time_value,	decimal_value)
+			VALUES ({int_value:UInt32}, {str_value1:String}, {str_value2:String}, {date_value:Date}, {date_time_value:DateTime}, {decimal_value: Decimal(10,4)})`, 
+			{params: {
+				...row,
+				decimal_value: row.decimal_value.toFixed(4)
+				}
+			}).toPromise();
+		expect(result2).to.be.ok();
+		
+		const result3 = await clickhouse.query('SELECT * FROM test_par_temp').toPromise();		
+		expect(result3).to.eql([row]);
+	});
+	
 });
 
 describe('response codes', () => {
@@ -764,7 +807,7 @@ describe('compatibility with Sequelize ORM', () => {
 
 
 
-describe('Constructor options', () => {
+(extConfig? describe.skip : describe)('Constructor options', () => {
 	const addConfigs = [
 		{
 			url: 'localhost',
