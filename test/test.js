@@ -475,7 +475,7 @@ describe('queries', () => {
 				arr3 Array(UInt8),
 				rec Map(String, String),
 				rec2 Map(String, Date),
-				rec3 Map(String, UInt8)
+				rec3 Map(String, Nullable(UInt8))
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
 		expect(r).to.be.ok();
@@ -489,7 +489,7 @@ describe('queries', () => {
 				arr3: [1, 2, 3, 4, 5],
 				rec: {},
 				rec2: { a: '1915-01-02', b: '1915-01-03' },
-				rec3: { a: 1, b: 2, c: 3, d: 4, e: 5 },
+				rec3: { a: 1, b: 2, c: 3, d: 4, e: null },
 			},
 			
 			{
