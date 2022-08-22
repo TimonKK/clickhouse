@@ -539,7 +539,7 @@ describe('queries', () => {
 		];
 		
 		const r2 = await clickhouse.insert(
-			'INSERT INTO test_array (date, str, arr, arr2, arr3)',
+			'insert into test_array (date, str, arr, arr2, arr3)',
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
