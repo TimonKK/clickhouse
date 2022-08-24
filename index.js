@@ -39,7 +39,7 @@ var ESCAPE_STRING = {
 	TSV: function (value) {
 		return value
 			.replace(/\\/g, '\\\\')
-			.replace(/\\/g, '\\')
+			.replace(/\'/g, '\\\'')
 			.replace(/\t/g, '\\t')
 			.replace(/\n/g, '\\n');
 	},
@@ -176,6 +176,7 @@ function encodeValue(quote, v, _format, isArray) {
 				return `'${ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v}'`;
 			}
 			
+
 			return ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v;
 		case 'number':
 			if (isNaN(v)) {

@@ -525,15 +525,15 @@ describe('queries', () => {
 				date: '2018-01-01',
 				str: 'Вам, проживающим за оргией оргию,',
 				arr: [],
-				arr2: ['1915-01-02', '1915-01-03'],
+				arr2: ['1985-01-02', '1985-01-03'],
 				arr3: [1,2,3,4,5]
 			},
 			
 			{
 				date: '2018-02-01',
-				str: 'имеющим ванную и теплый клозет!',
-				arr: ['5670000000', 'asdas dasf'],
-				arr2: ['1915-02-02'],
+				str: 'It\'s apostrophe test.',
+				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
+				arr2: ['1985-02-02'],
 				arr3: []
 			}
 		];
@@ -543,6 +543,8 @@ describe('queries', () => {
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
+		const r3 = await clickhouse.query('SELECT * FROM test_array ORDER BY date').toPromise();		
+		expect(r3).to.eql(rows);
 	});
 
 	it('insert field as raw string', async () => {
@@ -562,7 +564,7 @@ describe('queries', () => {
 		
 		const rows = [
 			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'))',
-			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет!\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
+			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет! It\'\'s apostrophe test.\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
 		];
 		
 		const r2 = await clickhouse.insert(
