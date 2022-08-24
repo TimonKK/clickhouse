@@ -713,8 +713,11 @@ describe('queries', () => {
 			str_value2 String, 
 			date_value Date, 
 			date_time_value DateTime, 
-			decimal_value Decimal(10,4) 
-			) ENGINE=Memory`).toPromise();
+			decimal_value Decimal(10,4),
+			arr Array(String),
+			arr2 Array(Date),
+			arr3 Array(UInt32)
+		) ENGINE=Memory`).toPromise();
 		expect(result1).to.be.ok();
 		
 		const row = {
@@ -724,9 +727,14 @@ describe('queries', () => {
 			date_value: '2022-08-18',
 			date_time_value: '2022-08-18 19:07:00',
 			decimal_value: 1234.678,
+			arr: ['asdfasdf', 'It\'s apostrophe test'],
+			arr2: ['2022-01-01', '2022-10-10'],
+			arr3: [12345, 54321],
 		};
-		const result2 = await clickhouse.insert(`INSERT INTO test_par_temp (int_value, str_value1, str_value2, date_value, date_time_value,	decimal_value)
-			VALUES ({int_value:UInt32}, {str_value1:String}, {str_value2:String}, {date_value:Date}, {date_time_value:DateTime}, {decimal_value: Decimal(10,4)})`, 
+		const result2 = await clickhouse.insert(`INSERT INTO test_par_temp (int_value, str_value1, str_value2, date_value, date_time_value,	decimal_value,
+			arr, arr2, arr3)
+			VALUES ({int_value:UInt32}, {str_value1:String}, {str_value2:String}, {date_value:Date}, {date_time_value:DateTime}, {decimal_value: Decimal(10,4)},
+			{arr:Array(String)},{arr2:Array(Date)},{arr3:Array(UInt32)})`, 
 			{params: {
 				...row,
 				decimal_value: row.decimal_value.toFixed(4)
