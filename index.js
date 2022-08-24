@@ -497,15 +497,7 @@ class QueryCursor {
 			//   when passed in the request.
 			Object.keys(data.params).forEach(k => {
 
-				let value = data.params[k].toString();
-
-				if (Array.isArray(data.params[k])) {
-					value = '[' + value + ']'
-				} 
-				else {
-					const str = JSON.stringify(value);
-					value = str.substring(1,str.length-1);
-				}
+				let value = encodeValue(false, data.params[k], 'TabSeparated');
 
 				url.searchParams.append(
 					`param_${k}`, value
