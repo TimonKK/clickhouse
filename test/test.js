@@ -750,6 +750,58 @@ describe('queries', () => {
 		const result3 = await clickhouse.query('SELECT * FROM test_par_temp').toPromise();		
 		expect(result3).to.eql([row]);
 	});
+
+	it('insert select', async () => {
+		const result = await clickhouse.query('DROP TABLE IF EXISTS test_par_temp').toPromise();
+		expect(result).to.be.ok();
+		
+		const result1 = await clickhouse.query(`CREATE TABLE test_par_temp (
+			int_value UInt32, 
+			str_value1 String, 
+			str_value2 String, 
+			date_value Date, 
+			date_time_value DateTime, 
+			decimal_value Decimal(10,4),
+			arr Array(String),
+			arr2 Array(Date),
+			arr3 Array(UInt32)
+		) ENGINE=Memory`).toPromise();
+		expect(result1).to.be.ok();
+		
+		const row = {
+			int_value: 12345,
+			str_value1: 'Test for "masked" characters. It workes, isn\'t it?',
+			str_value2: JSON.stringify({name:'It is "something".'}),
+			date_value: '2022-08-18',
+			date_time_value: '2022-08-18 19:07:00',
+			decimal_value: 1234.678,
+			arr: ['asdfasdf', 'It\'s apostrophe test'],
+			arr2: ['2022-01-01', '2022-10-10'],
+			arr3: [12345, 54321],
+		};
+		const result2 = await clickhouse.insert(`INSERT INTO test_par_temp (int_value, str_value1, str_value2, date_value, date_time_value,	decimal_value,
+			arr, arr2, arr3)
+			select {int_value:UInt32}, {str_value1:String}, {str_value2:String}, {date_value:Date}, {date_time_value:DateTime}, {decimal_value: Decimal(10,4)},
+			{arr:Array(String)},{arr2:Array(Date)},{arr3:Array(UInt32)}`, 
+			{params: {
+				...row,
+				decimal_value: row.decimal_value.toFixed(4)
+				}
+			}).toPromise();
+		expect(result2).to.be.ok();
+
+		const result3 = await clickhouse.query('SELECT * FROM test_par_temp').toPromise();		
+		expect(result3).to.eql([row]);
+
+		const result4 = await clickhouse.insert(`INSERT INTO test_par_temp (int_value, str_value1, str_value2, date_value, date_time_value,	decimal_value,
+			arr, arr2, arr3)
+			select 123456, 'awerqwerqwer', 'rweerwrrewr', '2022-08-25', '2022-08-25 02:00:01', '123.1234',
+			['aaa','bbb'],['2022-08-22','2022-08-23'],[1,2,3,4]`
+			).toPromise();
+		expect(result2).to.be.ok();
+		
+
+	});
 	
 });
 

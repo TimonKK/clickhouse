@@ -10,6 +10,7 @@ const stream2asynciter = require('stream2asynciter');
 const { URL } = require('url');
 const tsv = require('tsv');
 const uuidv4 = require('uuid/v4');
+const INSERT_FIELDS_MASK = /^INSERT\sINTO\s(.+?)\s*\(((\n|.)+?)\)/i;
 
 
 /**
@@ -176,7 +177,6 @@ function encodeValue(quote, v, _format, isArray) {
 				return `'${ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v}'`;
 			}
 			
-
 			return ESCAPE_STRING[format] ? ESCAPE_STRING[format](v, quote) : v;
 		case 'number':
 			if (isNaN(v)) {
@@ -421,7 +421,7 @@ class QueryCursor {
 		}
 		
 		if (isFirstElObject) {
-			let m = query.match(/^INSERT INTO (.+?)\s*\(((\n|.)+?)\)/i);
+			let m = query.match(INSERT_FIELDS_MASK);
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
 			} else {
