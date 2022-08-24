@@ -421,7 +421,7 @@ class QueryCursor {
 		}
 		
 		if (isFirstElObject) {
-			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/i);
+			let m = query.match(/^INSERT INTO (.+?)\s*\(((\n|.)+?)\)/i);
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
 			} else {

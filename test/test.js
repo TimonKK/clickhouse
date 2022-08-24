@@ -515,7 +515,8 @@ describe('queries', () => {
 				str String,
 				arr Array(String),
 				arr2 Array(Date),
-				arr3 Array(UInt8)
+				arr3 Array(UInt8),
+				id1 UUID
 			) ENGINE=MergeTree(date, date, 8192)
 		`).toPromise();
 		expect(r).to.be.ok();
@@ -526,7 +527,8 @@ describe('queries', () => {
 				str: 'Вам, проживающим за оргией оргию,',
 				arr: [],
 				arr2: ['1985-01-02', '1985-01-03'],
-				arr3: [1,2,3,4,5]
+				arr3: [1,2,3,4,5],
+				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
 			},
 			
 			{
@@ -534,12 +536,15 @@ describe('queries', () => {
 				str: 'It\'s apostrophe test.',
 				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
 				arr2: ['1985-02-02'],
-				arr3: []
+				arr3: [],
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
 			}
 		];
 		
 		const r2 = await clickhouse.insert(
-			'insert into test_array (date, str, arr, arr2, arr3)',
+			`insert into test_array 
+			(date, str, arr, arr2, 
+			 arr3, id1)`,
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
