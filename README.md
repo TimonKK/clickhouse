@@ -199,6 +199,48 @@ const result = await rs.pipe(tf).pipe(ws).exec();
 ```
 ***
 
+insert array of objects:
+```javascript
+
+/*
+	CREATE TABLE IF NOT EXISTS test_array (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8),
+				id1 UUID
+			) ENGINE=MergeTree(date, date, 8192)
+*/
+		const rows = [
+			{
+				date: '2018-01-01',
+				str: 'Something1...',
+				arr: [],
+				arr2: ['1985-01-02', '1985-01-03'],
+				arr3: [1,2,3,4,5],
+				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
+			},
+			
+			{
+				date: '2018-02-01',
+				str: 'Something2...',
+				arr: ['5670000000', 'Something3...'],
+				arr2: ['1985-02-02'],
+				arr3: [],
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
+			}
+		];
+		
+		await clickhouse.insert(
+			`insert into test_array 
+			(date, str, arr, arr2, 
+			 arr3, id1)`,
+			rows
+		).toPromise();
+```
+***
+
 Parameterized Values:
 ```javascript
 const rows = await clickhouse.query(

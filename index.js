@@ -10,6 +10,7 @@ const stream2asynciter = require('stream2asynciter');
 const { URL } = require('url');
 const tsv = require('tsv');
 const uuidv4 = require('uuid/v4');
+const INSERT_FIELDS_MASK = /^INSERT\sINTO\s(.+?)\s*\(((\n|.)+?)\)/i;
 
 
 /**
@@ -39,7 +40,7 @@ var ESCAPE_STRING = {
 	TSV: function (value) {
 		return value
 			.replace(/\\/g, '\\\\')
-			.replace(/\\/g, '\\')
+			.replace(/\'/g, '\\\'')
 			.replace(/\t/g, '\\t')
 			.replace(/\n/g, '\\n');
 	},
@@ -420,7 +421,7 @@ class QueryCursor {
 		}
 		
 		if (isFirstElObject) {
-			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/);
+			let m = query.match(INSERT_FIELDS_MASK);
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
 			} else {
@@ -496,15 +497,7 @@ class QueryCursor {
 			//   when passed in the request.
 			Object.keys(data.params).forEach(k => {
 
-				let value = data.params[k].toString();
-
-				if (Array.isArray(data.params[k])) {
-					value = '[' + value + ']'
-				} 
-				else {
-					const str = JSON.stringify(value);
-					value = str.substring(1,str.length-1);
-				}
+				let value = encodeValue(false, data.params[k], 'TabSeparated');
 
 				url.searchParams.append(
 					`param_${k}`, value
