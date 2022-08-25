@@ -1,6 +1,7 @@
 'use strict';
 
 const zlib = require('zlib');
+const _ = require('lodash');
 const request = require('request');
 const { Transform, Readable, } = require('stream');
 const JSONStream = require('JSONStream');
@@ -358,10 +359,10 @@ class QueryCursor {
 		this.query = query;
 		this.data = data;
 		
-		this.opts = {...opts,  
+		this.opts = _.merge({}, opts,  {
 			format: this.connection.opts.format,
 			raw: this.connection.opts.raw
-		}
+		});
 		
 		// Sometime needs to override format by query
 		const formatFromQuery = ClickHouse.getFormatFromQuery(this.query);
@@ -452,15 +453,15 @@ class QueryCursor {
 			database,
 		} = me.connection.opts;
 		
-		const params = {
+		const params = _.merge({
 			headers: {
 				'Content-Type': 'text/plain'
 			},
-		 ...reqParams};
+		}, reqParams);
 		
-		const configQS ={ ...config, 
+		const configQS = _.merge({}, config, {
 			query_id: me.queryId,
-		};
+		});
 		
 		if (me.connection.opts.isSessionPerQuery) {
 			configQS.session_id = uuidv4();
@@ -594,13 +595,12 @@ class QueryCursor {
 		
 		me._request = request.post(reqParams, (err, res) => {
 			if (me.isDebug) {
-				const { statusCode, body, statusMessage, headers } = res;
-				console.log('QueryCursor.exec: result', me.query, err, {
-					statusCode,
-					body,
-					statusMessage,
-					headers
-				});
+				console.log('QueryCursor.exec: result', me.query, err, _.pick(res, [
+					'statusCode',
+					'body',
+					'statusMessage',
+					'headers'
+				]));
 			}
 			
 			if (err) {
@@ -756,10 +756,10 @@ class QueryCursor {
 					rs.emit('error', err);
 				})
 				.on('header', header => {
-					metaData = header 
+					metaData = _.merge({}, header);
 				})
 				.on('footer', footer => {
-					rs.emit('meta', {...metaData, ...footer});
+					rs.emit('meta', _.merge(metaData, footer));
 				})
 				.on('data', function (data) {
 					rs.emit('data', data);
@@ -828,25 +828,26 @@ class QueryCursor {
 
 class ClickHouse {
 	constructor(opts = {}) {
-		this.opts = {
-			debug: false,
-			database: DATABASE,
-			password: '',
-			basicAuth: null,
-			isUseGzip: false,
-			config: {
-				session_timeout                         : 60,
-				output_format_json_quote_64bit_integers : 0,
-				enable_http_compression                 : 0
+		this.opts = _.merge(
+			{
+				debug: false,
+				database: DATABASE,
+				password: '',
+				basicAuth: null,
+				isUseGzip: false,
+				config: {
+					session_timeout                         : 60,
+					output_format_json_quote_64bit_integers : 0,
+					enable_http_compression                 : 0
+				},
+				format: FORMAT_NAMES.JSON,
+				raw: false,
+				isSessionPerQuery: false,
+				trimQuery: false,
+				usePost: false,
 			},
-			format: FORMAT_NAMES.JSON,
-			raw: false,
-			isSessionPerQuery: false,
-			trimQuery: false,
-			usePost: false,
-			...opts
-
-		}
+			opts
+		);
 		
 		
 		let url  = opts.url || opts.host || URI,
