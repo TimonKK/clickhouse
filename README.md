@@ -268,6 +268,8 @@ npm run test
 ***
 
 **Changelogs**:
+* 2020-08-26 (v2.6.0)
+	- A lot of PRs from community
 * 2020-11-02 (v2.4.1)
 	- Merge list of PR
 	- fix test with Base Auth check
