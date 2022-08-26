@@ -241,6 +241,32 @@ insert array of objects:
 ```
 ***
 
+insert with format JSONEachRow:
+```javascript
+
+// rows - array of objects as in previous example
+		
+		await clickhouse.insert(
+			`INSERT INTO test_array 
+			(*) FORMAT JSONEachRow`,
+			rows
+		).toPromise();
+
+// or with stream
+
+		const stream = await clickhouse.insert(
+			`insert into test_array 
+			(*) FORMAT JSONEachRow`
+		).stream();
+
+		for (const row of rows){
+			stream.writeRow(row);
+		}
+		await stream.exec();
+
+```
+***
+
 Parameterized Values:
 ```javascript
 const rows = await clickhouse.query(
