@@ -509,6 +509,56 @@ describe('queries', () => {
 	it('insert field as array', async () => {
 		clickhouse.sessionId = Date.now();
 		
+		await clickhouse.query('DROP TABLE IF EXISTS test_array',).toPromise();		
+
+		const r = await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS test_array (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8),
+				id1 UUID
+			) ENGINE=MergeTree(date, date, 8192)
+		`).toPromise();
+		
+		expect(r).to.be.ok();
+		
+		const rows = [
+			{
+				date: '2018-01-01',
+				str: 'Вам, проживающим за оргией оргию,',
+				arr: [],
+				arr2: ['1985-01-02', '1985-01-03'],
+				arr3: [1,2,3,4,5],
+				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
+			},
+			
+			{
+				date: '2018-02-01',
+				str: 'It\'s apostrophe test.',
+				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
+				arr2: ['1985-02-02'],
+				arr3: [],
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
+			}
+		];
+		
+		const r2 = await clickhouse.insert(
+			`insert into test_array 
+			(date, str, arr, arr2, 
+			 arr3, id1)`,
+			rows
+		).toPromise();
+		expect(r2).to.be.ok();
+		const r3 = await clickhouse.query('SELECT * FROM test_array ORDER BY date').toPromise();		
+		expect(r3).to.eql(rows);
+	});
+
+	it('insert * as JSONEachRow with array', async () => {
+		clickhouse.sessionId = Date.now();
+		
+		await clickhouse.query('DROP TABLE IF EXISTS test_array',).toPromise();		
 		const r = await clickhouse.query(`
 			CREATE TABLE IF NOT EXISTS test_array (
 				date Date,
@@ -543,11 +593,59 @@ describe('queries', () => {
 		
 		const r2 = await clickhouse.insert(
 			`insert into test_array 
-			(date, str, arr, arr2, 
-			 arr3, id1)`,
+			(*) FORMAT JSONEachRow`,
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
+		const r3 = await clickhouse.query('SELECT * FROM test_array ORDER BY date').toPromise();		
+		expect(r3).to.eql(rows);
+	});
+
+	it('insert * as JSONEachRow with stream', async () => {
+		clickhouse.sessionId = Date.now();
+		
+		await clickhouse.query('DROP TABLE IF EXISTS test_array',).toPromise();		
+		const r = await clickhouse.query(`
+			CREATE TABLE IF NOT EXISTS test_array (
+				date Date,
+				str String,
+				arr Array(String),
+				arr2 Array(Date),
+				arr3 Array(UInt8),
+				id1 UUID
+			) ENGINE=MergeTree(date, date, 8192)
+		`).toPromise();
+		expect(r).to.be.ok();
+		
+		const rows = [
+			{
+				date: '2018-01-01',
+				str: 'Вам, проживающим за оргией оргию,',
+				arr: [],
+				arr2: ['1985-01-02', '1985-01-03'],
+				arr3: [1,2,3,4,5],
+				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
+			},
+			
+			{
+				date: '2018-02-01',
+				str: 'It\'s apostrophe test.',
+				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
+				arr2: ['1985-02-02'],
+				arr3: [],
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
+			}
+		];
+		
+		const stream = await clickhouse.insert(
+			`insert into test_array 
+			(*) FORMAT JSONEachRow`
+		).stream();
+		stream.writeRow(rows[0]);
+		stream.writeRow(rows[1]);
+		const r2 = await stream.exec();
+		expect(r2).to.be.ok();
+
 		const r3 = await clickhouse.query('SELECT * FROM test_array ORDER BY date').toPromise();		
 		expect(r3).to.eql(rows);
 	});

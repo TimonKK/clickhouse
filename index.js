@@ -30,7 +30,8 @@ const SEPARATORS = {
 };
 
 const ALIASES = {
-	TabSeparated: "TSV"
+	TabSeparated: "TSV",
+	JSONEachRow: "jsonEachRow"
 };
 
 var ESCAPE_STRING = {
@@ -66,12 +67,14 @@ const PORT = 8123;
 const DATABASE = 'default';
 
 const FORMAT_NAMES = {
+	JSONEachRow: 'jsonEachRow',
 	JSON: 'json',
 	TSV: 'tsv',
 	CSV: 'csv'
 }
 
 const FORMATS = {
+	[FORMAT_NAMES.JSONEachRow]: 'JSONEachRow',
 	[FORMAT_NAMES.JSON]: 'JSON',
 	[FORMAT_NAMES.TSV]: 'TabSeparatedWithNames',
 	[FORMAT_NAMES.CSV]: 'CSVWithNames',
@@ -101,6 +104,13 @@ function parseTSV(body, options = { header: true }) {
 	data.splice(data.length - 1, 1);
 	return data;
 }
+
+function parseJSONEachRow(body) {
+	const data = body.split('\n').map((str)=>str?JSON.parse(str):{});
+	data.splice(data.length - 1, 1);
+	return data;
+}
+
 
 function parseCSVStream(s = new Set()) {
 	let isFirst = true;
@@ -253,10 +263,12 @@ function isObject(obj) {
 
 
 class Rs extends Transform {
-	constructor(reqParams) {
+	constructor(reqParams, opts) {
 		super();
 		
 		const me = this;
+
+		me.opts = opts;
 		
 		me.ws = request.post(reqParams);
 		
@@ -290,7 +302,11 @@ class Rs extends Transform {
 		} else if (Array.isArray(data)) {
 			row = ClickHouse.mapRowAsArray(data);
 		} else if (isObject(data)) {
-			throw new Error('Error: Inserted data must be an array, not an object.');
+			if (this.opts.format === FORMAT_NAMES.JSONEachRow) {
+				row = ClickHouse.mapRowAsJSONObject(data);
+			} else {
+				throw new Error('Error: Inserted data must be an array, not an object.');
+			}
 		}
 		
 		let isOk = this.write(
@@ -425,7 +441,9 @@ class QueryCursor {
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
 			} else {
-				throw new Error('insert query wasnt parsed field list after TABLE_NAME');
+				if (me.format === FORMAT_NAMES.TSV) {
+					throw new Error('insert query wasnt parsed field list after TABLE_NAME');
+				}
 			}
 		}
 		
@@ -434,7 +452,13 @@ class QueryCursor {
 				return row;
 			}
 			if (isFirstElObject) {
-				return ClickHouse.mapRowAsObject(fieldList, row);
+				if (me.format === FORMAT_NAMES.TSV) {
+					return ClickHouse.mapRowAsTabSeparatedObject(fieldList, row);
+				} else if (me.format === FORMAT_NAMES.JSONEachRow) {
+					return ClickHouse.mapRowAsJSONObject(row);
+				} else {
+					throw new Error('Object should be serialized as TabSeparated or JSONEachRow format');
+				}
 			} else {
 				return ClickHouse.mapRowAsArray(row);
 			}
@@ -552,8 +576,11 @@ class QueryCursor {
 					if (data && Array.isArray(data) && data.every(d => typeof d === 'string')) {
 						params['body'] = me._getBodyForInsert();
 					}
-				} else {
-					query += ' FORMAT TabSeparated';
+				} else  {
+					if (!R_FORMAT_PARSER.test(query)) {
+						query += ' FORMAT TabSeparated';
+						me.format = FORMAT_NAMES.TSV;
+					}
 
 					if (data) {
 						params['body'] = me._getBodyForInsert();
@@ -646,6 +673,9 @@ class QueryCursor {
 	getBodyParser() {
 		if (this.format === FORMAT_NAMES.JSON) {
 			return JSON.parse;
+		}	
+		if (this.format === FORMAT_NAMES.JSONEachRow) {
+			return parseJSONEachRow;
 		}
 		
 		if (this.format === FORMAT_NAMES.TSV) {
@@ -699,7 +729,7 @@ class QueryCursor {
 		const reqParams = me._getReqParams();
 		
 		if (me.isInsert) {
-			const rs = new Rs(reqParams);
+			const rs = new Rs(reqParams, me.opts);
 			rs.query = me.query;
 			
 			me._request = rs;
@@ -986,14 +1016,16 @@ class ClickHouse {
 			.join('\t');
 	}
 	
-	static mapRowAsObject(fieldList, row) {
+	static mapRowAsTabSeparatedObject(fieldList, row) {
 		return fieldList
 			.map(f => {
 				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
 			})
 			.join('\t');
 	}
-	
+	static mapRowAsJSONObject(row) {
+		return JSON.stringify(row);
+	}
 	static getFullFormatName(format = '') {
 		if ( ! FORMATS[format]) {
 			throw new Error(`Clickhouse.getFullFormatName: unknown format "${format}`);
