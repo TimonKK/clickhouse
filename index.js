@@ -31,7 +31,6 @@ const SEPARATORS = {
 
 const ALIASES = {
 	TabSeparated: "TSV",
-	JSONEachRow: "jsonEachRow"
 };
 
 var ESCAPE_STRING = {
@@ -67,7 +66,7 @@ const PORT = 8123;
 const DATABASE = 'default';
 
 const FORMAT_NAMES = {
-	JSONEachRow: 'jsonEachRow',
+	JSONEachRow: 'JSONEachRow',
 	JSON: 'json',
 	TSV: 'tsv',
 	CSV: 'csv'
