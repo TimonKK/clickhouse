@@ -10,6 +10,7 @@ const stream2asynciter = require('stream2asynciter');
 const { URL } = require('url');
 const tsv = require('tsv');
 const uuidv4 = require('uuid/v4');
+const INSERT_FIELDS_MASK = /^INSERT\sINTO\s(.+?)\s*\(((\n|.)+?)\)/i;
 
 
 /**
@@ -39,7 +40,7 @@ var ESCAPE_STRING = {
 	TSV: function (value) {
 		return value
 			.replace(/\\/g, '\\\\')
-			.replace(/\\/g, '\\')
+			.replace(/\'/g, '\\\'')
 			.replace(/\t/g, '\\t')
 			.replace(/\n/g, '\\n');
 	},
@@ -420,7 +421,7 @@ class QueryCursor {
 		}
 		
 		if (isFirstElObject) {
-			let m = query.match(/INSERT INTO (.+?) \((.+?)\)/);
+			let m = query.match(INSERT_FIELDS_MASK);
 			if (m) {
 				fieldList = m[2].split(',').map(s => s.trim());
 			} else {
@@ -496,11 +497,7 @@ class QueryCursor {
 			//   when passed in the request.
 			Object.keys(data.params).forEach(k => {
 
-				let value = data.params[k].toString();
-
-				if (Array.isArray(data.params[k])) {
-					value = '[' + value + ']'
-				};
+				let value = encodeValue(false, data.params[k], 'TabSeparated');
 
 				url.searchParams.append(
 					`param_${k}`, value
@@ -522,7 +519,7 @@ class QueryCursor {
 				query = query.replace(/(--[^\n]*)/g, '').replace(/\s+/g, ' ')
 			}
 			
-			if (query.match(/^(with|select|show|exists)/i)) {
+			if (query.match(/^(with|select|show|exists|create|drop)/i)) {
 				if ( ! R_FORMAT_PARSER.test(query)) {
 					query += ` FORMAT ${ClickHouse.getFullFormatName(me.format)}`;
 				}
@@ -552,7 +549,7 @@ class QueryCursor {
 				}
 			} else if (me.isInsert) {
 				if (query.match(/values/i)) {
-					if (data && data.every(d => typeof d === 'string')) {
+					if (data && Array.isArray(data) && data.every(d => typeof d === 'string')) {
 						params['body'] = me._getBodyForInsert();
 					}
 				} else {
@@ -739,6 +736,11 @@ class QueryCursor {
 			
 			const requestStream = request.post(reqParams);
 			
+			// handle network socket errors to avoid uncaught error
+			requestStream.on('error', function (err) {
+				rs.emit('error', err);
+			});
+
 			// Не делаем .pipe(rs) потому что rs - Readable,
 			// а для pipe нужен Writable
 			let s;

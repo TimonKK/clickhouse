@@ -1,3 +1,5 @@
 node_modules
 .idea/*
 .vscode/
+test_config.json
+*.code-workspace
