@@ -40,7 +40,7 @@ before(async () => {
 	await temp.query(`CREATE DATABASE ${database}`).toPromise();
 });
 
-describe('On cluster', () => {
+describe.skip('On cluster', () => {
 	// Note: this test only works with ClickHouse setup as Cluster named test_cluster
 	it('should be able to create and drop a table', async () => {
 		const createTableQuery = `
