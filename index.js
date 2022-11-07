@@ -989,7 +989,7 @@ class ClickHouse {
 	static mapRowAsObject(fieldList, row) {
 		return fieldList
 			.map(f => {
-				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
+				return encodeValue(false, row[f] != null || row[f] === null ? row[f] : '', 'TabSeparated');
 			})
 			.join('\t');
 	}
