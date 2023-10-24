@@ -222,7 +222,9 @@ function encodeValue(quote, v, _format, isArray) {
 				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
 			}
 			
-			return JSON.stringify(v).replace(/\"/g, "'");
+			return '{' + Object.keys(v).map(function (i) {
+				return encodeValue(true, i, format, true) + ':' + encodeValue(true, v[i], format, true);
+			}).join(',') + '}';
 		case 'boolean':
 			return v === true ? 1 : 0;
 		default:

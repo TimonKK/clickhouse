@@ -543,7 +543,7 @@ describe('queries', () => {
 				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
 				arr2: ['1985-02-02'],
 				arr3: [],
-				rec: { a: '5670000000', b: 'asdas dasf' },
+				rec: { a: '5670000000', b: 'asdas dasf', c: 'asdas dasf. It\'s apostrophe test.' },
 				rec2: { a: { '1985-02-02': [] } },
 				rec3: {},
 				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
