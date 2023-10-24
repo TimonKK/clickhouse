@@ -216,6 +216,9 @@ function encodeValue(quote, v, _format, isArray) {
 			}
 			
 			if (v === null) {
+				if (isArray) {
+					return 'null';
+				}
 				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
 			}
 			
@@ -988,9 +991,7 @@ class ClickHouse {
 	
 	static mapRowAsObject(fieldList, row) {
 		return fieldList
-			.map(f => {
-				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
-			})
+			.map(f => encodeValue(false, row[f], 'TabSeparated'))
 			.join('\t');
 	}
 	

@@ -512,8 +512,8 @@ describe('queries', () => {
 		const r = await clickhouse.query(`
 			CREATE TABLE IF NOT EXISTS test_array (
 				date Date,
-				str String,
-				arr Array(String),
+				str Nullable(String),
+				arr Array(Nullable(String)),
 				arr2 Array(Date),
 				arr3 Array(UInt8),
 				rec Map(String, String),
@@ -533,7 +533,7 @@ describe('queries', () => {
 				arr3: [1,2,3,4,5],
 				rec: {},
 				rec2: { a: { '1985-01-02': [1, 2, 3] }, b: { '1985-01-03': [4, 5] } },
-				rec3: { a: 1, b: 2, c: 3, d: 4, e: null },
+				rec3: { a: 1, b: 2, c: 3, d: 4 },
 				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
 			},
 			
@@ -546,6 +546,18 @@ describe('queries', () => {
 				rec: { a: '5670000000', b: 'asdas dasf' },
 				rec2: { a: { '1985-02-02': [] } },
 				rec3: {},
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
+			},
+			
+			{
+				date: '2018-03-01',
+				str: null,
+				arr: [null, '', 'asdas dasf.'],
+				arr2: ['1985-02-02'],
+				arr3: [],
+				rec: { a: '5670000000', b: 'asdas dasf' },
+				rec2: { a: { '1985-02-02': [] } },
+				rec3: { a: 1, b: null },
 				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
 			}
 		];
