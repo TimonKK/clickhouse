@@ -73,7 +73,7 @@ describe('Exec', () => {
 					id UInt32
 				)
 			)
-			ENGINE=MergeTree(date, (mark, time), 8192)`,
+			ENGINE=MergeTree PARTITION BY date ORDER BY (mark, time)`,
 			
 			'OPTIMIZE TABLE session_temp PARTITION 201807 FINAL',
 			
@@ -295,7 +295,7 @@ describe('Select', () => {
 			}
 		});
 		
-		it(`with stream ${fullFormatExpr}"`, cb => {
+		it(`with stream "${fullFormatExpr}"`, cb => {
 			let i     = 0,
 				error = null;
 			
@@ -306,7 +306,7 @@ describe('Select', () => {
 				.on('error', err => error = err)
 				.on('close', () => {
 					expect(error).to.be.ok();
-					expect(error.toString()).to.match(new RegExp(`Table ${database}.random_table_name doesn\'t exist`));
+					expect(error.toString()).to.match(new RegExp(`Table ${database}.random_table_name does not exist.`));
 					
 					expect(i).to.eql(0);
 					
@@ -520,7 +520,7 @@ describe('queries', () => {
 				rec2 Map(String, Map(Date, Array(UInt8))),
 				rec3 Map(String, Nullable(UInt8)),
 				id1 UUID
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		
@@ -575,7 +575,7 @@ describe('queries', () => {
 				rec Map(String, String),
 				rec2 Map(String, Map(DateTime, Array(UInt8))),
 				rec3 Map(String, UInt8)
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		
@@ -602,7 +602,7 @@ describe('queries', () => {
 				arr2 Array(Date),
 				arr3 Array(UInt8),
 				fixedStr FixedString(12)
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		
