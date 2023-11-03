@@ -216,10 +216,15 @@ function encodeValue(quote, v, _format, isArray) {
 			}
 			
 			if (v === null) {
+				if (isArray) {
+					return 'null';
+				}
 				return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
 			}
 			
-			return format in ESCAPE_NULL ? ESCAPE_NULL[format] : v;
+			return '{' + Object.keys(v).map(function (i) {
+				return encodeValue(true, i, format, true) + ':' + encodeValue(true, v[i], format, true);
+			}).join(',') + '}';
 		case 'boolean':
 			return v === true ? 1 : 0;
 		default:
@@ -988,9 +993,7 @@ class ClickHouse {
 	
 	static mapRowAsObject(fieldList, row) {
 		return fieldList
-			.map(f => {
-				return encodeValue(false, row[f] != null ? row[f] : '', 'TabSeparated');
-			})
+			.map(f => encodeValue(false, row[f], 'TabSeparated'))
 			.join('\t');
 	}
 	

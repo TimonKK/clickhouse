@@ -73,7 +73,7 @@ describe('Exec', () => {
 					id UInt32
 				)
 			)
-			ENGINE=MergeTree(date, (mark, time), 8192)`,
+			ENGINE=MergeTree PARTITION BY date ORDER BY (mark, time)`,
 			
 			'OPTIMIZE TABLE session_temp PARTITION 201807 FINAL',
 			
@@ -295,7 +295,7 @@ describe('Select', () => {
 			}
 		});
 		
-		it(`with stream ${fullFormatExpr}"`, cb => {
+		it(`with stream "${fullFormatExpr}"`, cb => {
 			let i     = 0,
 				error = null;
 			
@@ -306,7 +306,7 @@ describe('Select', () => {
 				.on('error', err => error = err)
 				.on('close', () => {
 					expect(error).to.be.ok();
-					expect(error.toString()).to.match(new RegExp(`Table ${database}.random_table_name doesn\'t exist`));
+					expect(error.toString()).to.match(new RegExp(`Table ${database}.random_table_name does not exist.`));
 					
 					expect(i).to.eql(0);
 					
@@ -512,12 +512,15 @@ describe('queries', () => {
 		const r = await clickhouse.query(`
 			CREATE TABLE IF NOT EXISTS test_array (
 				date Date,
-				str String,
-				arr Array(String),
+				str Nullable(String),
+				arr Array(Nullable(String)),
 				arr2 Array(Date),
 				arr3 Array(UInt8),
+				rec Map(String, String),
+				rec2 Map(String, Map(Date, Array(UInt8))),
+				rec3 Map(String, Nullable(UInt8)),
 				id1 UUID
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		
@@ -528,6 +531,9 @@ describe('queries', () => {
 				arr: [],
 				arr2: ['1985-01-02', '1985-01-03'],
 				arr3: [1,2,3,4,5],
+				rec: {},
+				rec2: { a: { '1985-01-02': [1, 2, 3] }, b: { '1985-01-03': [4, 5] } },
+				rec3: { a: 1, b: 2, c: 3, d: 4 },
 				id1: '102a05cb-8aaf-4f11-a442-20c3558e4384'
 			},
 			
@@ -537,6 +543,21 @@ describe('queries', () => {
 				arr: ['5670000000', 'asdas dasf. It\'s apostrophe test.'],
 				arr2: ['1985-02-02'],
 				arr3: [],
+				rec: { a: '5670000000', b: 'asdas dasf', c: 'asdas dasf. It\'s apostrophe test.' },
+				rec2: { a: { '1985-02-02': [] } },
+				rec3: {},
+				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
+			},
+			
+			{
+				date: '2018-03-01',
+				str: null,
+				arr: [null, '', 'asdas dasf.'],
+				arr2: ['1985-02-02'],
+				arr3: [],
+				rec: { a: '5670000000', b: 'asdas dasf' },
+				rec2: { a: { '1985-02-02': [] } },
+				rec3: { a: 1, b: null },
 				id1: 'c2103985-9a1e-4f4a-b288-b292b5209de1'
 			}
 		];
@@ -544,7 +565,7 @@ describe('queries', () => {
 		const r2 = await clickhouse.insert(
 			`insert into test_array 
 			(date, str, arr, arr2, 
-			 arr3, id1)`,
+			 arr3, rec, rec2, rec3, id1)`,
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
@@ -562,18 +583,21 @@ describe('queries', () => {
 				arr Array(String),
 				arr2 Array(Date),
 				arr3 Array(UInt8),
-				fixedStr String
-			) ENGINE=MergeTree(date, date, 8192)
+				fixedStr String,
+				rec Map(String, String),
+				rec2 Map(String, Map(DateTime, Array(UInt8))),
+				rec3 Map(String, UInt8)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		
 		const rows = [
-			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1915-01-02 10:00:00\',\'1915-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'))',
-			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет! It\'\'s apostrophe test.\',[\'5670000000\',\'asdas dasf\'],[\'1915-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'))'
+			'(\'2018-01-01 10:00:00\',\'Вам, проживающим за оргией оргию,\',[],[\'1985-01-02 10:00:00\',\'1985-01-03 10:00:00\'],[1,2,3,4,5],unhex(\'60ed56e75bb93bd353267faa\'),{},{\'a\':{\'1985-01-02 10:00:00\':[1,2,3]},\'b\':{\'1985-01-03 10:00:00\':[4,5]}},{\'a\':1,\'b\':2,\'c\':3,\'d\':4,\'e\':5})',
+			'(\'2018-02-01 10:00:00\',\'имеющим ванную и теплый клозет! It\'\'s apostrophe test.\',[\'5670000000\',\'asdas dasf\'],[\'1985-02-02 10:00:00\'],[],unhex(\'60ed56f4a88cd5dcb249d959\'),{\'a\':\'5670000000\',\'b\':\'asdas dasf\'},{\'a\':{\'1985-02-02 10:00:00\':[]}},{})'
 		];
 		
 		const r2 = await clickhouse.insert(
-			'INSERT INTO test_raw_string (date, str, arr, arr2, arr3, fixedStr) VALUES',
+			'INSERT INTO test_raw_string (date, str, arr, arr2, arr3, fixedStr, rec, rec2, rec3) VALUES',
 			rows
 		).toPromise();
 		expect(r2).to.be.ok();
@@ -590,7 +614,7 @@ describe('queries', () => {
 				arr2 Array(Date),
 				arr3 Array(UInt8),
 				fixedStr FixedString(12)
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 		`).toPromise();
 		expect(r).to.be.ok();
 		

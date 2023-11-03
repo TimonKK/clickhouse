@@ -71,7 +71,7 @@ const queries = [
 			id UInt32
 		)
 	)
-	ENGINE=MergeTree(date, (mark, time), 8192)`,
+	ENGINE=MergeTree PARTITION BY date ORDER BY (mark, time)`,
 
 	'OPTIMIZE TABLE ukit.loadstat PARTITION 201807 FINAL'
 ];
@@ -210,7 +210,7 @@ insert array of objects:
 				arr2 Array(Date),
 				arr3 Array(UInt8),
 				id1 UUID
-			) ENGINE=MergeTree(date, date, 8192)
+			) ENGINE=MergeTree PARTITION BY date ORDER BY date
 */
 		const rows = [
 			{
